@@ -33,7 +33,15 @@ for i in $(seq 0 $((NUM_ENVS - 1))); do
     if [ -n "$NS" ]; then
         NS_ARGS=(namespace:="$NS" gz_partition:="$NS")
     fi
-    ros2 launch ur_gazebo ur.gazebo.launch.py \
+    # `headless:=true` only drops the gzclient GUI window -- `ign gazebo -s` (server-only)
+    # still initializes OGRE for the robot's wrist camera sensor (use_camera:=true, always
+    # on regardless of run_yolo), which needs a real X/GLX context. On a true headless host
+    # (no X server at all, e.g. any Vast.ai instance) that crashes gzserver outright:
+    # "Ogre::RenderingAPIException: Couldn't open X display", exit code 134 (SIGABRT) --
+    # confirmed live, not hypothetical. xvfb-run -a gives it a virtual display per instance
+    # (auto-picks a free display number, so concurrent instances don't collide).
+    xvfb-run -a -s "-screen 0 1280x1024x24" \
+        ros2 launch ur_gazebo ur.gazebo.launch.py \
         "${NS_ARGS[@]}" \
         headless:=true \
         launch_rviz:=false \

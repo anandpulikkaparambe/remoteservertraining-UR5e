@@ -1,8 +1,13 @@
 FROM osrf/ros:humble-desktop-full
 
 # Install system dependencies, pip, and clean up apt cache
+# xvfb: `ign gazebo -s` (server-only/headless) still initializes OGRE for the robot's
+# wrist camera sensor and crashes without a real X display on a truly headless host
+# (confirmed live on a Vast.ai instance: Ogre::RenderingAPIException, SIGABRT) --
+# vastai_train_entrypoint.sh wraps each Gazebo launch in `xvfb-run` to give it one.
 RUN apt-get update && apt-get install -y \
     python3-pip \
+    xvfb \
     ros-humble-moveit \
     ros-humble-gazebo-ros-pkgs \
     ros-humble-gazebo-ros2-control \
