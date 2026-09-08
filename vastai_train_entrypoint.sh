@@ -25,9 +25,16 @@ for i in $(seq 0 $((NUM_ENVS - 1))); do
         NS="env${i}"
     fi
     echo "Launching Gazebo+MoveIt instance $i (namespace='${NS}', gz_partition='${NS}')..."
+    # `ros2 launch` rejects a bare `namespace:=` with nothing after the `=` as a
+    # malformed argument -- can't pass NS unconditionally when it's empty (instance 0).
+    # Omitting the args entirely for that case is equivalent: ur.gazebo.launch.py
+    # already defaults both to "" (see its DeclareLaunchArgument calls).
+    NS_ARGS=()
+    if [ -n "$NS" ]; then
+        NS_ARGS=(namespace:="$NS" gz_partition:="$NS")
+    fi
     ros2 launch ur_gazebo ur.gazebo.launch.py \
-        namespace:="$NS" \
-        gz_partition:="$NS" \
+        "${NS_ARGS[@]}" \
         headless:=true \
         launch_rviz:=false \
         run_yolo:="$RUN_YOLO" \
