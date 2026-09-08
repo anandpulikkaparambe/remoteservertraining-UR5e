@@ -155,6 +155,18 @@ straight inside it. Steps below, worked out and verified against the live consol
     first run on a fresh instance -- the whole multi-instance path is unvalidated (see
     "Known, unresolved blockers" above), and a smaller club is cheaper to debug if the
     fixed-sleep readiness wait in `vastai_train_entrypoint.sh` turns out too short.
+    **Live-validated 2026-09-08 on a 16-core / 31GB instance: `NUM_ENVS=2` ran cleanly
+    end-to-end (SAC training loop started, both instances' controllers activated).
+    `NUM_ENVS=4` on the same box did not** -- the simultaneous-boot CPU spike (4
+    Gazebo servers + MoveIt + controller spawners all starting within the same ~60s
+    window) pushed load average to 22 on 16 cores, and `ros2_control`'s spawner
+    processes don't retry indefinitely -- 2 of the 4 instances had their controller
+    spawners die outright (`process has died [exit code 1]`), permanently breaking
+    those environments for that run. This project's own ~3-cores/instance estimate
+    (see "Sizing" below) holds at *steady state* but undercounts the simultaneous-boot
+    spike -- size `NUM_ENVS` for the boot spike, not steady-state usage, or stagger the
+    launch further apart (`vastai_train_entrypoint.sh`'s 15s-per-instance gap wasn't
+    enough at 4 instances on 16 cores).
 12. **Watch progress**: `tail -f rl_logs/train_sac_club.log` and
     `rl_logs/gazebo_instance*.log`.
 13. **Pull checkpoints back periodically** (from your local machine, `pip install
