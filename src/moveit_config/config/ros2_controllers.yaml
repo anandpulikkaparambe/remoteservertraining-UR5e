@@ -1,0 +1,90 @@
+# This config file is used by ros2_control
+# Top-level keys use the ROS2 "/**" wildcard namespace instead of bare node names --
+# a bare "controller_manager:" key only matches a node whose FULLY QUALIFIED name is
+# exactly "/controller_manager", so it silently failed to apply (every controller's
+# "type" param read as undefined -> "Failed loading controller") the moment this stack
+# ran under a non-default ROS namespace (see ur.gazebo.launch.py's `namespace` arg, used
+# to run a second parallel Gazebo+MoveIt instance for --num-envs>1 training). "/**"
+# matches the node at any namespace, so this now works both unnamespaced (single
+# instance) and namespaced (parallel instances) without needing two config files.
+/**:
+  controller_manager:
+    ros__parameters:
+      update_rate: 100  # Hz
+
+      arm_controller:
+        type: joint_trajectory_controller/JointTrajectoryController
+
+      # Spawned by ur.gazebo.launch.py for gripper:=robotiq_85/robotiq_140 (both
+      # declare a command_interface on finger_joint, ur.ros2_control.xacro).
+      gripper_controller:
+        type: position_controllers/GripperActionController
+
+      # arm_with_gripper_controller:
+      #   type: joint_trajectory_controller/JointTrajectoryController
+
+      joint_state_broadcaster:
+        type: joint_state_broadcaster/JointStateBroadcaster
+        ros__parameters:
+          interfaces:
+            - position
+            - velocity
+            - effort
+
+  arm_controller:
+    ros__parameters:
+      joints:
+        - shoulder_pan_joint
+        - shoulder_lift_joint
+        - elbow_joint
+        - wrist_1_joint
+        - wrist_2_joint
+        - wrist_3_joint
+      command_interfaces:
+        - position
+      state_interfaces:
+        - position
+        - velocity
+      allow_nonzero_velocity_at_trajectory_end: true
+      # Without this, JointTrajectoryController declares a trajectory "succeeded" purely
+      # because its time schedule elapsed -- with no tolerance check, it never notices if
+      # the arm actually fell behind and stopped short. goal_time gives it extra time past
+      # the nominal schedule to still catch up before declaring failure; the per-joint
+      # 0.05 rad goal tolerance matches what the planning-side JointConstraints already use.
+      constraints:
+        goal_time: 5.0
+        shoulder_pan_joint: {goal: 0.05}
+        shoulder_lift_joint: {goal: 0.05}
+        elbow_joint: {goal: 0.05}
+        wrist_1_joint: {goal: 0.05}
+        wrist_2_joint: {goal: 0.05}
+        wrist_3_joint: {goal: 0.05}
+
+  # Used for gripper:=robotiq_85/robotiq_140. goal_tolerance is tightened from
+  # GripperActionController's 0.01m default, which exceeds the Robotiq gripper's own
+  # travel range.
+  gripper_controller:
+    ros__parameters:
+      joint: finger_joint
+      state_interfaces:
+        - position
+        - velocity
+        - effort
+      goal_tolerance: 0.0005
+
+  # arm_with_gripper_controller:
+  #   ros__parameters:
+  #     joints:
+  #       - shoulder_pan_joint
+  #       - shoulder_lift_joint
+  #       - elbow_joint
+  #       - wrist_1_joint
+  #       - wrist_2_joint
+  #       - wrist_3_joint
+  #       - finger_joint
+  #     command_interfaces:
+  #       - position
+  #     state_interfaces:
+  #       - position
+  #       - velocity
+  #     allow_nonzero_velocity_at_trajectory_end: true

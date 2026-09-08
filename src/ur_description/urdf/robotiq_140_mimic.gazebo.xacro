@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro">
+  <xacro:macro name="robotiq_140_mimic_plugins" params="prefix">
+    <!-- DISABLED: Mimic joints are now handled through ros2_control configuration -->
+    <!-- The standalone gz-sim-mimic-joint-system plugin is not available/needed -->
+    <!-- gz_ros2_control handles mimic joints natively when defined in ros2_control -->
+    <!--
+    <gazebo>
+      <plugin filename="gz-sim-mimic-joint-system" name="gz::sim::systems::MimicJoint">
+        <joint>${prefix}finger_joint</joint>
+        <mimic_joint>${prefix}right_outer_knuckle_joint</mimic_joint>
+        <multiplier>-1.0</multiplier>
+        <offset>0.0</offset>
+      </plugin>
+
+      <plugin filename="gz-sim-mimic-joint-system" name="gz::sim::systems::MimicJoint">
+        <joint>${prefix}finger_joint</joint>
+        <mimic_joint>${prefix}left_inner_knuckle_joint</mimic_joint>
+        <multiplier>-1.0</multiplier>
+        <offset>0.0</offset>
+      </plugin>
+
+      <plugin filename="gz-sim-mimic-joint-system" name="gz::sim::systems::MimicJoint">
+        <joint>${prefix}finger_joint</joint>
+        <mimic_joint>${prefix}right_inner_knuckle_joint</mimic_joint>
+        <multiplier>-1.0</multiplier>
+        <offset>0.0</offset>
+      </plugin>
+
+      <plugin filename="gz-sim-mimic-joint-system" name="gz::sim::systems::MimicJoint">
+        <joint>${prefix}finger_joint</joint>
+        <mimic_joint>${prefix}left_inner_finger_joint</mimic_joint>
+        <multiplier>1.0</multiplier>
+        <offset>0.0</offset>
+      </plugin>
+
+      <plugin filename="gz-sim-mimic-joint-system" name="gz::sim::systems::MimicJoint">
+        <joint>${prefix}finger_joint</joint>
+        <mimic_joint>${prefix}right_inner_finger_joint</mimic_joint>
+        <multiplier>1.0</multiplier>
+        <offset>0.0</offset>
+      </plugin>
+    </gazebo>
+    -->
+  </xacro:macro>
+</robot>

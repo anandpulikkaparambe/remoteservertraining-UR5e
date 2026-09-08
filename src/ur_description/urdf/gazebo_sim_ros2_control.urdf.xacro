@@ -1,0 +1,22 @@
+<?xml version="1.0" ?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro">
+    <!-- namespace (params, default "") lets multiple robot instances run in one Gazebo
+         process or across separate ros_gz_bridge/controller_manager stacks without their
+         controller_manager services/topics (and this remapped robot_description) colliding.
+         Left blank, behavior is identical to before this was added. -->
+    <xacro:macro name="load_gazebo_sim_ros2_control_plugin" params="robot_name use_gazebo namespace:=''">
+        <xacro:if value="${use_gazebo}">
+            <gazebo>
+                <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+                    <parameters>$(find moveit_config)/config/ros2_controllers.yaml</parameters>
+                    <ros>
+                        <xacro:unless value="${namespace == ''}">
+                            <namespace>${namespace}</namespace>
+                        </xacro:unless>
+                        <remapping>/controller_manager/robot_description:=robot_description</remapping>
+                    </ros>
+                </plugin>
+            </gazebo>
+        </xacro:if>
+    </xacro:macro>
+</robot>

@@ -1,0 +1,77 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="ur">
+
+   <!-- Declare arguments -->
+   <xacro:arg name="name" default="ur"/>
+   <xacro:arg name="ur_type" default="ur5e"/>
+   <xacro:arg name="tf_prefix" default=""/>
+   <xacro:arg name="joint_limit_params" default="$(find ur_description)/config/$(arg ur_type)/joint_limits.yaml"/>
+   <xacro:arg name="kinematics_params" default="$(find ur_description)/config/$(arg ur_type)/default_kinematics.yaml"/>
+   <xacro:arg name="physical_params" default="$(find ur_description)/config/$(arg ur_type)/physical_parameters.yaml"/>
+   <xacro:arg name="visual_params" default="$(find ur_description)/config/$(arg ur_type)/visual_parameters.yaml"/>
+   <xacro:arg name="transmission_hw_interface" default=""/>
+   <xacro:arg name="safety_limits" default="false"/>
+   <xacro:arg name="safety_pos_margin" default="0.15"/>
+   <xacro:arg name="safety_k_position" default="20"/>
+   <xacro:arg name="force_abs_paths" default="false"/>
+   <xacro:arg name="robot_name" default="ur"/>
+   <xacro:arg name="use_gazebo" default="true"/>
+   <xacro:arg name="use_camera" default="false"/>
+   <xacro:arg name="namespace" default=""/>
+
+   <!-- Include UR macro -->
+   <xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
+
+   <!-- Include Robotiq 85 macro -->
+   <xacro:include filename="$(find robotiq_2f_gripper_description)/urdf/robotiq_2f_85_macro.xacro" />
+
+   <!-- Create link fixed to the "world" -->
+   <link name="world" />
+
+   <!-- Arm -->
+   <xacro:ur_robot
+     name="$(arg name)"
+     tf_prefix="$(arg tf_prefix)"
+     parent="world"
+     joint_limits_parameters_file="$(arg joint_limit_params)"
+     kinematics_parameters_file="$(arg kinematics_params)"
+     physical_parameters_file="$(arg physical_params)"
+     visual_parameters_file="$(arg visual_params)"
+     safety_limits="$(arg safety_limits)"
+     safety_pos_margin="$(arg safety_pos_margin)"
+     safety_k_position="$(arg safety_k_position)"
+     force_abs_paths="$(arg force_abs_paths)">
+      <origin xyz="0 0.55 0.80" rpy="0 0 0" /> <!-- Mounted 15cm beyond the table's back edge (table top surface y in [-0.4, 0.4],
+           at z=0.80), on an extended stand-off, matching the proven-working ur_robotiq_140.urdf.xacro mount. See that file's
+           history for why (self-collision margin at the wrist when grasping lego_red near y=0.4). -->
+   </xacro:ur_robot>
+
+   <!-- Instantiate Robotiq 85 Gripper -->
+   <xacro:robotiq_arg2f_85 prefix=""/>
+
+   <!-- Attach Gripper to UR Flange (tool0) -->
+   <joint name="ur_to_gripper" type="fixed">
+     <parent link="tool0"/>
+     <child link="robotiq_arg2f_base_link"/>
+     <origin xyz="0 0 0" rpy="0 0 0"/>
+   </joint>
+
+   <!-- Gazebo/Control Plugins -->
+   <xacro:include filename="$(find ur_description)/urdf/gazebo_sim_ros2_control.urdf.xacro" />
+   <xacro:load_gazebo_sim_ros2_control_plugin
+     robot_name="$(arg robot_name)"
+     use_gazebo="$(arg use_gazebo)"
+     namespace="$(arg namespace)"/>
+
+   <xacro:include filename="$(find ur_description)/urdf/ur.ros2_control.xacro" />
+   <xacro:ur_ros2_control name="ur_robot" initial_positions_file="$(find ur_description)/config/initial_positions.yaml" use_gazebo="$(arg use_gazebo)" gripper="robotiq_85"/>
+
+   <!-- Include Intel RealSense Camera (Conditional) -->
+   <xacro:if value="$(arg use_camera)">
+     <xacro:include filename="$(find ur_description)/urdf/intel_rgbd_cam_d435.urdf.xacro"/>
+     <xacro:intel_realsense_camera prefix="" parent="tool0">
+       <origin xyz="0.0 -0.07 0.02" rpy="0 -1.5708 1.5708"/>
+     </xacro:intel_realsense_camera>
+   </xacro:if>
+
+</robot>

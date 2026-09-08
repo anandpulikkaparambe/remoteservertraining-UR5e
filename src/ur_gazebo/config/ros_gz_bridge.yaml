@@ -1,0 +1,86 @@
+# gz topic published by Camera model
+- ros_topic_name: "/overhead_camera/image_raw"
+  gz_topic_name: "/overhead_camera/image_raw"
+  ros_type_name: "sensor_msgs/msg/Image"
+  gz_type_name: "gz.msgs.Image"
+  direction: GZ_TO_ROS
+  qos:
+    reliability: "best_effort"
+    durability: "volatile"
+
+# Robot Camera
+
+- ros_topic_name: "/camera/image_raw"
+  gz_topic_name: "/camera/image_raw"
+  ros_type_name: "sensor_msgs/msg/Image"
+  gz_type_name: "gz.msgs.Image"
+  direction: GZ_TO_ROS
+  qos:
+    reliability: "best_effort"
+    durability: "volatile"
+
+# Camera Info mapping
+- ros_topic_name: "/camera/camera_info"
+  gz_topic_name: "/camera/camera_info"
+  ros_type_name: "sensor_msgs/msg/CameraInfo"
+  gz_type_name: "gz.msgs.CameraInfo"
+  direction: GZ_TO_ROS
+  qos:
+    reliability: "best_effort"
+    durability: "volatile"
+
+# Depth Image mapping
+- ros_topic_name: "/camera/depth_image"
+  gz_topic_name: "/camera/depth_image"
+  ros_type_name: "sensor_msgs/msg/Image"
+  gz_type_name: "gz.msgs.Image"
+  direction: GZ_TO_ROS
+  qos:
+    reliability: "best_effort"
+    durability: "volatile"
+
+# # ✅ Correct clock bridging
+# relative (not "/clock") so a namespaced parameter_bridge instance publishes its own
+# instance's sim clock under its own namespace instead of colliding with another
+# concurrently-running instance's /clock.
+- topic_name: "clock"
+  ros_type_name: "rosgraph_msgs/msg/Clock"
+  gz_type_name: "gz.msgs.Clock"
+  direction: GZ_TO_ROS
+
+# Ground Truth Poses (Gazebo -> ROS TF)
+- ros_topic_name: "/gz_poses_static"
+  gz_topic_name: "/world/lego_sorting/pose/info"
+  ros_type_name: "tf2_msgs/msg/TFMessage"
+  gz_type_name: "gz.msgs.Pose_V"
+  direction: GZ_TO_ROS
+  qos:
+    reliability: "best_effort"
+    durability: "volatile"
+
+# Ground Truth Poses (Dynamic models)
+- ros_topic_name: "/gz_poses_dynamic"
+  gz_topic_name: "/world/lego_sorting/dynamic_pose/info"
+  ros_type_name: "tf2_msgs/msg/TFMessage"
+  gz_type_name: "gz.msgs.Pose_V"
+  direction: GZ_TO_ROS
+  qos:
+    reliability: "best_effort"
+    durability: "volatile"
+
+# Conveyor Belt Control
+- ros_topic_name: "/conveyor_belt"
+  gz_topic_name: "/conveyor_belt"
+  ros_type_name: "std_msgs/msg/Float64"
+  gz_type_name: "gz.msgs.Double"
+  direction: ROS_TO_GZ
+
+# Wrist Camera
+- ros_topic_name: "/wrist_camera/image_raw"
+  gz_topic_name: "/wrist_camera/image_raw"
+  ros_type_name: "sensor_msgs/msg/Image"
+  gz_type_name: "gz.msgs.Image"
+  direction: GZ_TO_ROS
+  qos:
+    reliability: "best_effort"
+    durability: "volatile"

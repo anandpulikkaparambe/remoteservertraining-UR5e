@@ -1,0 +1,408 @@
+#!/usr/bin/env python3
+import rclpy
+from rclpy.node import Node
+from rclpy.action import ActionClient
+from geometry_msgs.msg import PoseStamped, Pose
+from sensor_msgs.msg import JointState
+from moveit_msgs.action import MoveGroup
+from moveit_msgs.msg import Constraints, JointConstraint, PositionConstraint, OrientationConstraint, BoundingVolume
+from moveit_msgs.msg import CollisionObject, PlanningScene
+from shape_msgs.msg import SolidPrimitive, Plane
+import tf_transformations
+from tf2_ros import Buffer, TransformListener, TransformBroadcaster
+from tf2_msgs.msg import TFMessage
+import copy
+import math
+import threading
+import time
+
+class SortingNode(Node):
+    def __init__(self):
+        super().__init__('sorting_node')
+        
+        # TF Listener for ground truth poses
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
+        self.tf_broadcaster = TransformBroadcaster(self)
+        
+        self.gz_pose_sub = self.create_subscription(
+            TFMessage,
+            '/gz_poses_dynamic',
+            self.gz_pose_cb,
+            10)
+
+        # Timer to check TF
+        self.timer = self.create_timer(1.0, self.check_tf_callback)
+        
+        self.joint_sub = self.create_subscription(
+            JointState,
+            '/joint_states',
+            self.joint_state_cb,
+            10)
+        self.current_joints = {}
+
+        # Publishers
+        self.collision_pub = self.create_publisher(CollisionObject, '/collision_object', 10)
+
+        # Action Client
+        self._action_client = ActionClient(self, MoveGroup, '/move_action')
+        # Gripper Action Client
+        from control_msgs.action import GripperCommand
+        self._gripper_client = ActionClient(self, GripperCommand, '/gripper_controller/gripper_cmd')
+        
+        self.group_name = "arm"
+        self.object_pose = None
+        self.is_moving = False
+
+        # Add Floor collision
+        threading.Thread(target=self.add_floor_collision).start()
+
+        self.get_logger().info('Sorting Node Started (Static Camera). Waiting for object...')
+        
+        # DEBUG: Check where the robot thinks it is
+        # This tells us if TF is correct (Z should be > 0.8)
+        try:
+            current_pose = self._action_client._node.get_clock().now() # Just placeholder
+            # We can't easily get pose from ActionClient alone without the whole MoveGroupWrapper
+            # But we can assume if the node started, we can query TF? 
+            # Easier: Just wait for the first pick_and_place to log "Current Pose"?
+            pass
+        except:
+             pass
+
+    def add_floor_collision(self):
+        # Floor
+        co = CollisionObject()
+        co.header.frame_id = "world"
+        co.id = "floor"
+        box = SolidPrimitive()
+        box.type = SolidPrimitive.BOX
+        box.dimensions = [3.0, 3.0, 0.05]
+        pose = Pose()
+        pose.position.x = 0.0; pose.position.y = 0.0
+        pose.position.z = -0.025
+        pose.orientation.w = 1.0
+        co.primitives.append(box)
+        co.primitive_poses.append(pose)
+        co.operation = CollisionObject.ADD
+        
+        # Table
+        # NOTE: We keep the collision table slightly lower (0.75m top) than real visual table (0.8m)
+        # to prevent "Touching" errors during grasping. Footprint (1.0x1.6) matches the real
+        # Gazebo table in pick_and_place_demo.world, not the previous undersized 1.0x0.8.
+        co_table = CollisionObject()
+        co_table.header.frame_id = "world"
+        co_table.id = "table"
+        box_t = SolidPrimitive()
+        box_t.type = SolidPrimitive.BOX
+        box_t.dimensions = [1.0, 1.6, 0.75] # Collision height reduced
+        pose_t = Pose()
+        pose_t.position.x = 0.0; pose_t.position.y = 0.0
+        pose_t.position.z = 0.375 # Center
+        pose_t.orientation.w = 1.0
+        co_table.primitives.append(box_t)
+        co_table.primitive_poses.append(pose_t)
+        co_table.operation = CollisionObject.ADD
+
+        # Publish in a loop to ensure RViz receives it
+        from visualization_msgs.msg import Marker, MarkerArray
+        marker_pub = self.create_publisher(MarkerArray, '/visualization_marker_array', 10)
+        
+        # Publish a few times to ensure RViz/MoveIt receives it, then stop.
+        # Continuous publishing invalidates the planning scene!
+        for _ in range(5):
+            if not rclpy.ok(): break
+            
+            # Collision Objects
+            self.collision_pub.publish(co)
+            self.collision_pub.publish(co_table)
+            
+            # Visual Markers
+            ma = MarkerArray()
+            
+            # Table (Brown)
+            m_table = Marker()
+            m_table.header.frame_id = "world"
+            m_table.id = 1
+            m_table.type = Marker.CUBE
+            m_table.action = Marker.ADD
+            m_table.pose.position.x = 0.0; m_table.pose.position.y = 0.0; m_table.pose.position.z = 0.425 
+            m_table.pose.orientation.w = 1.0
+            m_table.scale.x = 1.0; m_table.scale.y = 0.8; m_table.scale.z = 0.85 
+            m_table.color.r = 0.6; m_table.color.g = 0.4; m_table.color.b = 0.2; m_table.color.a = 1.0
+            ma.markers.append(m_table)
+            
+            # Bin (Red Translucent)
+            m_bin = Marker()
+            m_bin.header.frame_id = "world"
+            m_bin.id = 3
+            m_bin.type = Marker.CUBE
+            m_bin.action = Marker.ADD
+            m_bin.pose.position.x = -0.35; m_bin.pose.position.y = 0.25; m_bin.pose.position.z = 0.85
+            m_bin.pose.orientation.w = 1.0
+            m_bin.scale.x = 0.2; m_bin.scale.y = 0.2; m_bin.scale.z = 0.1
+            m_bin.color.r = 1.0; m_bin.color.g = 0.0; m_bin.color.b = 0.0; m_bin.color.a = 0.8
+            ma.markers.append(m_bin)
+            
+            marker_pub.publish(ma)
+            time.sleep(1.0)
+        
+        self.get_logger().info("Collision Objects Published (Static)")
+
+    def operate_gripper(self, width, wait=True):
+        from control_msgs.action import GripperCommand
+        if not self._gripper_client.wait_for_server(timeout_sec=5.0):
+            return False
+        goal = GripperCommand.Goal()
+        goal.command.position = width
+        goal.command.max_effort = 100.0
+        future = self._gripper_client.send_goal_async(goal)
+        
+        if not wait:
+            return True
+            
+        try:
+            handle = future.result()
+            if not handle or not handle.accepted: return False
+            handle.get_result_async().result() # Wait
+        except Exception as e:
+            self.get_logger().error(f"Gripper error: {e}")
+            return False
+        return True
+
+    def joint_state_cb(self, msg):
+        for name, pos in zip(msg.name, msg.position):
+            self.current_joints[name] = pos
+
+    def gz_pose_cb(self, msg):
+        for t in msg.transforms:
+            x = t.transform.translation.x
+            y = t.transform.translation.y
+            # Red lego starts near (0.3, 0.2). Filter out the robot links or other legos.
+            if 0.2 < x < 0.4 and 0.1 < y < 0.3:
+                t.header.frame_id = "world"
+                t.child_frame_id = "lego_red"
+                t.header.stamp = self.get_clock().now().to_msg()
+                self.tf_broadcaster.sendTransform(t)
+                break
+
+
+
+    def check_tf_callback(self):
+        if self.is_moving:
+            return
+            
+        try:
+            # Look up the transform from base_link to lego_red
+            # We use base_link directly because pick_and_place plans in base_link
+            t = self.tf_buffer.lookup_transform(
+                'base_link',
+                'lego_red',
+                rclpy.time.Time()
+            )
+            
+            # Create a dummy PoseStamped for pick_and_place to use
+            self.object_pose = PoseStamped()
+            self.object_pose.pose.position.x = t.transform.translation.x
+            self.object_pose.pose.position.y = t.transform.translation.y
+            self.object_pose.pose.position.z = t.transform.translation.z
+            
+            self.get_logger().info(f'Found red lego at base_link coordinates: {self.object_pose.pose.position.x:.3f}, {self.object_pose.pose.position.y:.3f}')
+            
+            self.is_moving = True
+            threading.Thread(target=self.pick_and_place).start()
+            
+        except Exception as e:
+            # Not found yet
+            pass
+
+    def create_pose_goal(self, pose, frame_id="world"):
+        goal_msg = MoveGroup.Goal()
+        goal_msg.request.group_name = self.group_name
+        goal_msg.request.num_planning_attempts = 10
+        goal_msg.request.allowed_planning_time = 5.0
+        goal_msg.request.max_velocity_scaling_factor = 0.5
+        goal_msg.request.max_acceleration_scaling_factor = 0.5
+        
+        pcm = PositionConstraint()
+        pcm.header.frame_id = frame_id
+        pcm.link_name = "tool0"
+        pcm.target_point_offset.x = 0.0; pcm.target_point_offset.y = 0.0; pcm.target_point_offset.z = 0.0
+        pcm.weight = 1.0
+        box = BoundingVolume()
+        primitive = SolidPrimitive()
+        primitive.type = SolidPrimitive.BOX
+        # Relax position box significantly to ensure it finds A solution
+        primitive.dimensions = [0.2, 0.2, 0.2] 
+        box.primitives.append(primitive)
+        p = Pose(); p.position = pose.position; p.orientation.w = 1.0
+        box.primitive_poses.append(p)
+        pcm.constraint_region = box
+        
+        
+        ocm = OrientationConstraint()
+        ocm.header.frame_id = frame_id
+        ocm.link_name = "tool0"
+        ocm.orientation = pose.orientation
+        # Relaxed Tolerances to help finding a valid IK solution
+        ocm.absolute_x_axis_tolerance = 3.14 # FULL FREEDOM
+        ocm.absolute_y_axis_tolerance = 3.14
+        ocm.absolute_z_axis_tolerance = 3.14
+        ocm.weight = 1.0
+
+        constraints = Constraints()
+        constraints.position_constraints.append(pcm)
+        constraints.orientation_constraints.append(ocm)
+        goal_msg.request.goal_constraints = [constraints]
+        return goal_msg
+
+    def execute_goal(self, goal_msg):
+        self.get_logger().info("Sending Goal...")
+        if not self._action_client.wait_for_server(timeout_sec=5.0):
+            self.get_logger().error("Action Server not available")
+            return False
+            
+        future = self._action_client.send_goal_async(goal_msg)
+        
+        # Wait for goal acceptance (since we're in a thread, we can sleep)
+        while not future.done():
+            time.sleep(0.1)
+            
+        goal_handle = future.result()
+        if not goal_handle.accepted:
+            self.get_logger().error("Goal Rejected by Server")
+            return False
+            
+        self.get_logger().info("Goal Accepted. Executing...")
+        result_future = goal_handle.get_result_async()
+        
+        # Wait for execution result
+        while not result_future.done():
+            time.sleep(0.1)
+            
+        res = result_future.result().result
+        if res.error_code.val == 1:
+            return True
+        if res.error_code.val == 1:
+            return True
+        else:
+            # Error Mapping
+            errors = {
+                -1: "FAILURE",
+                -2: "PLANNING_FAILED (Collision or Out of Reach)",
+                -3: "INVALID_MOTION_PLAN",
+                -4: "MOTION_PLAN_INVALIDATED_BY_ENVIRONMENT_CHANGE",
+                -5: "CONTROL_FAILED",
+                -6: "UNABLE_TO_AQUIRE_SENSOR_DATA",
+                -7: "TIMED_OUT",
+                -16: "INVALID_GOAL_CONSTRAINTS (Orientation Violation)",
+                -21: "NO_IK_SOLUTION",
+                -26: "INVALID_GOAL_CONSTRAINTS (Legacy)"
+            }
+            err_str = errors.get(res.error_code.val, "UNKNOWN_ERROR")
+            self.get_logger().error(f"Move Failed: {res.error_code.val} -> {err_str}")
+            return False
+
+    def pick_and_place(self):
+        try:
+            target_pose = self.object_pose.pose
+            
+            # Robotiq 140 extends along its Y axis by ~11.5cm, and Z axis by ~2.55cm.
+            # To point fingertips down, we rotate tool0 by Roll = -90 deg (-1.5708 rad).
+            # In this orientation, tool0's Y points DOWN, tool0's Z points LEFT (in base_link +Y).
+            # Therefore, fingertips are physically at Y = +0.0255 and Z = -0.115 relative to tool0.
+            
+            # To place fingertips at the Lego, we must shift tool0 appropriately.
+            LEGO_Z_BASE = 0.0295  # Center of the 5.7cm Rubiks cube relative to base_link
+            
+            # Calculate Tool0 coordinates for grasp
+            tool0_x = target_pose.position.x
+            tool0_y = target_pose.position.y - 0.0255
+            grasp_z = LEGO_Z_BASE + 0.115
+            pre_grasp_z = grasp_z + 0.10
+
+            self.get_logger().info(f"PLANNING: Pick relative to BASE_LINK. Tool0 Z={grasp_z:.3f}")
+
+            # 0. Open Gripper
+            self.get_logger().info("ACTION: Opening Gripper")
+            self.operate_gripper(0.0)
+            
+            # Orientation: Roll=-pi/2, Pitch=0, Yaw=0 points Robotiq 140 DOWN.
+            q = tf_transformations.quaternion_from_euler(-1.5708, 0, 0) 
+            
+            # Target pose is ALREADY in base_link frame via TF
+            # Pre-Grasp
+            pre_grasp = copy.deepcopy(target_pose)
+            pre_grasp.position.x = tool0_x
+            pre_grasp.position.y = tool0_y
+            pre_grasp.position.z = pre_grasp_z
+            pre_grasp.orientation.x = q[0]; pre_grasp.orientation.y = q[1]; pre_grasp.orientation.z = q[2]; pre_grasp.orientation.w = q[3]
+
+            self.get_logger().info("Moving to Pre-Grasp")
+            # PASS base_link frame!
+            if not self.execute_goal(self.create_pose_goal(pre_grasp, "base_link")): 
+                self.is_moving = False; return
+
+            # Grasp
+            grasp = copy.deepcopy(pre_grasp)
+            grasp.position.z = grasp_z
+            self.get_logger().info("Moving to Grasp")
+            if not self.execute_goal(self.create_pose_goal(grasp, "base_link")): 
+                self.is_moving = False; return
+
+            # Close (non-blocking so it doesn't hang when fingers stall against the rigid Lego)
+            self.get_logger().info("Closing Gripper...")
+            self.operate_gripper(0.45, wait=False) 
+            time.sleep(2.0) 
+
+            # Lift
+            self.get_logger().info("Lifting")
+            if not self.execute_goal(self.create_pose_goal(pre_grasp, "base_link")): 
+                self.is_moving = False; return
+
+            # Place (In Bin at World X=-0.35, Y=0.25)
+            # Base is at World X=0.0, Y=-0.20.
+            # Relative Target: X = -0.35 - 0.0 = -0.35, Y = 0.25 - (-0.20) = 0.45.
+            # Shift tool0 Y by -0.0255 for the finger offset!
+            place = copy.deepcopy(pre_grasp)
+            place.position.x = -0.35
+            place.position.y = 0.45 - 0.0255 
+            
+            # Height: Bin floor is Z=0.05 (rel Base). Walls are higher.
+            # Drop from Z=0.25 (25cm) to be safe.
+            place.position.z = 0.25 
+            
+            self.get_logger().info("Moving to Place")
+            if not self.execute_goal(self.create_pose_goal(place, "base_link")): 
+                self.is_moving = False; return
+            
+            # Open
+            self.operate_gripper(0.0)
+            time.sleep(1.0)
+            
+            # Go Home (Up)
+            self.get_logger().info("Going Home")
+            home_pose = copy.deepcopy(place)
+            home_pose.position.z = 0.3 # 30cm above base
+            if not self.execute_goal(self.create_pose_goal(home_pose, "base_link")): 
+                 self.is_moving = False; return
+            
+            self.get_logger().info("SEQUENCE COMPLETE")
+
+        except Exception as e:
+            self.get_logger().error(f"Sequence Error: {e}")
+        finally:
+            self.is_moving = False
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = SortingNode()
+    from rclpy.executors import MultiThreadedExecutor
+    executor = MultiThreadedExecutor()
+    executor.add_node(node)
+    executor.spin()
+    node.destroy_node()
+    rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()

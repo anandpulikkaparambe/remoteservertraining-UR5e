@@ -1,0 +1,45 @@
+# CHOMP as a refinement stage for an OMPL-seeded trajectory (see phase1_tf_pick_and_place.py's
+# hybrid=True path): OMPL/RRTConnect finds a fast, valid, but not necessarily shortest or
+# smoothest path; CHOMP is then given that trajectory via request.trajectory_constraints and
+# optimizes it further, instead of starting CHOMP's own optimization from a naive straight-line
+# guess (which, unseeded, is where CHOMP tends to struggle in a workspace this tightly clearanced).
+planning_plugins:
+  - chomp_interface/CHOMPPlanner
+enable_failure_recovery: true
+# AddTimeOptimalParameterization folded into request_adapters -- see ompl_planning.yaml's
+# comment for why (this build's move_group binary silently ignores response_adapters).
+request_adapters: default_planner_request_adapters/ResolveConstraintFrames default_planner_request_adapters/FixWorkspaceBounds default_planner_request_adapters/FixStartStateBounds default_planner_request_adapters/FixStartStateCollision default_planner_request_adapters/AddTimeOptimalParameterization
+
+planning_time_limit: 10.0
+max_iterations: 200
+max_iterations_after_collision_free: 5
+smoothness_cost_weight: 0.1
+obstacle_cost_weight: 1.0
+learning_rate: 0.01
+animate_path: false
+add_randomness: false
+smoothness_cost_velocity: 0.0
+smoothness_cost_acceleration: 1.0
+smoothness_cost_jerk: 0.0
+hmc_discretization: 0.01
+hmc_stochasticity: 0.01
+hmc_annealing_factor: 0.99
+use_hamiltonian_monte_carlo: false
+ridge_factor: 0.01
+use_pseudo_inverse: false
+pseudo_inverse_ridge_factor: 1e-4
+joint_update_limit: 0.1
+# Panda's stock example uses 0.2m -- this rig's own collision boxes (table/bin) were trimmed
+# with 5cm margins elsewhere in this project because clearance is genuinely tight here; asking
+# CHOMP to push 20cm clear of every obstacle is unreachable in this workspace and would make it
+# fight the geometry instead of converging. 0.05 matches the margins already proven workable.
+collision_clearance: 0.05
+collision_threshold: 0.07
+random_jump_amount: 1.0
+use_stochastic_descent: true
+max_recovery_attempts: 5
+# When request.trajectory_constraints is populated (the OMPL seed), CHOMP uses that as its
+# initial trajectory regardless of this setting; this is only the fallback for an unseeded
+# request (e.g. if hybrid=False is used with pipeline_id="chomp" directly, which nothing here
+# currently does, but keeps this config valid standalone too).
+trajectory_initialization_method: "quintic-spline"

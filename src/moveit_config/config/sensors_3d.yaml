@@ -1,0 +1,19 @@
+# Disabled 2026-09-06 (handoff reliability investigation): this configured a
+# PointCloudOctomapUpdater listening on /camera/depth/color/points -- a topic that has
+# never existed in this project's Gazebo world. This project doesn't use real-time 3D
+# sensing for collision avoidance at all; it registers static CollisionObjects for the
+# table/bin instead (see MoveItHandoffBridge.ensure_scene() in ur3e_rl/moveit_bridge.py).
+# This was a leftover MoveIt Setup Assistant default, never actually needed.
+#
+# Live diagnosis found this contributing to intermittent handoff failures: a direct
+# MoveGroup planning request occasionally returned error_code=-6
+# (UNABLE_TO_AQUIRE_SENSOR_DATA), and separately, two near-identical planning requests from
+# the same start state showed one instant (0.2s) generic PLANNING_FAILED immediately
+# followed by a normal success on retry -- a pattern consistent with a flaky wait on this
+# never-populated sensor data occasionally stalling/short-circuiting a planning request,
+# not a real reachability problem. See project_phase2_rl_status memory for the full
+# investigation (handoff success rate was ~55-62% before this fix; the orientation-
+# tolerance theory tried first did not improve it).
+#
+# sensors: [] tells occupancy_map_monitor to load no sensor plugins at all.
+sensors: []

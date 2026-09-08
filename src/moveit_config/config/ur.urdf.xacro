@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="ur">
+    <xacro:arg name="initial_positions_file" default="initial_positions.yaml" />
+    <xacro:arg name="robot_name" default="ur"/>
+    <xacro:arg name="ur_type" default="ur5e"/>
+    <xacro:arg name="use_fake_hardware" default="true"/>
+    
+    <!-- Import UR arm with Robotiq 140 gripper -->
+    <xacro:include filename="$(find ur_description)/urdf/ur_robotiq_140.urdf.xacro" />
+</robot>

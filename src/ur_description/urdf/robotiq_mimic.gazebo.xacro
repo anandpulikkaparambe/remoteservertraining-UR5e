@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro">
+  <xacro:macro name="robotiq_mimic_plugins" params="prefix">
+    <gazebo>
+      <plugin filename="gz-sim-mimic-joint-system" name="gz::sim::systems::MimicJoint">
+        <joint>${prefix}finger_joint</joint>
+        <mimic_joint>${prefix}right_outer_knuckle_joint</mimic_joint>
+        <multiplier>1.0</multiplier>
+        <offset>0.0</offset>
+      </plugin>
+
+      <plugin filename="gz-sim-mimic-joint-system" name="gz::sim::systems::MimicJoint">
+        <joint>${prefix}finger_joint</joint>
+        <mimic_joint>${prefix}left_inner_knuckle_joint</mimic_joint>
+        <multiplier>1.0</multiplier>
+        <offset>0.0</offset>
+      </plugin>
+
+      <plugin filename="gz-sim-mimic-joint-system" name="gz::sim::systems::MimicJoint">
+        <joint>${prefix}finger_joint</joint>
+        <mimic_joint>${prefix}right_inner_knuckle_joint</mimic_joint>
+        <multiplier>1.0</multiplier>
+        <offset>0.0</offset>
+      </plugin>
+
+      <plugin filename="gz-sim-mimic-joint-system" name="gz::sim::systems::MimicJoint">
+        <joint>${prefix}finger_joint</joint>
+        <mimic_joint>${prefix}left_inner_finger_joint</mimic_joint>
+        <multiplier>-1.0</multiplier>
+        <offset>0.0</offset>
+      </plugin>
+
+      <plugin filename="gz-sim-mimic-joint-system" name="gz::sim::systems::MimicJoint">
+        <joint>${prefix}finger_joint</joint>
+        <mimic_joint>${prefix}right_inner_finger_joint</mimic_joint>
+        <multiplier>-1.0</multiplier>
+        <offset>0.0</offset>
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+</robot>

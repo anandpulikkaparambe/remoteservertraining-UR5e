@@ -1,0 +1,25 @@
+pilz_industrial_motion_planner:
+  planning_plugins:
+    - pilz_industrial_motion_planner/CommandPlanner
+  
+  request_adapters:
+    - default_planning_request_adapters/ValidateWorkspaceBounds
+    - default_planning_request_adapters/CheckStartStateBounds
+    - default_planning_request_adapters/CheckStartStateCollision
+  
+  default_planner_config: PTP
+  
+  capabilities:
+    - pilz_industrial_motion_planner/MoveGroupSequenceAction
+    - pilz_industrial_motion_planner/MoveGroupSequenceService
+
+arm:
+  planner_configs:
+    PTP:
+      type: pilz_industrial_motion_planner/PTP
+    LIN:
+      type: pilz_industrial_motion_planner/LIN
+    CIRC:
+      type: pilz_industrial_motion_planner/CIRC
+  default_planner_config: PTP
+

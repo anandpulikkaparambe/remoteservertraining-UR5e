@@ -1,0 +1,78 @@
+# Real UR5e joint-space waypoints, taught via Freedrive on 2026-08-31 (pick/bin) and 2026-09-01 (home).
+# Captured from live /joint_states while physically holding the arm at each position.
+# Order matches /joint_states: elbow, shoulder_lift, shoulder_pan, wrist_1, wrist_2, wrist_3
+
+# real_home_position (2026-09-01): replaces the old sim-derived home_joints for real hardware.
+# That sim pose caused a repeatable self-collision (gripper/camera vs. arm links) partway through
+# the reconfiguration -- confirmed live via two real UR protective stops (error C153A4) before being
+# abandoned in favor of this Freedrive-taught, gripper/camera-clearance-verified pose.
+real_home_position:
+  elbow_joint: -0.08594497293233871
+  shoulder_lift_joint: -1.4966069397381325
+  shoulder_pan_joint: 0.5586659908294678
+  wrist_1_joint: -1.5000588831356545
+  wrist_2_joint: -1.3971450964557093
+  wrist_3_joint: 3.1361582279205322
+
+# real_bin_position updated 2026-09-01, retaught with the real gripper/camera attached
+# (previous 2026-08-31 value below was taught before that hardware was on the arm):
+# elbow_joint: -1.355822205543518
+# shoulder_lift_joint: -2.1870633564391078
+# shoulder_pan_joint: -1.9444530645953577
+# wrist_1_joint: -1.16644840062175
+# wrist_2_joint: 1.5712871551513672
+# wrist_3_joint: 1.6570223569869995
+real_bin_position:
+  elbow_joint: 1.2563765684710901
+  shoulder_lift_joint: -0.949236587887146
+  shoulder_pan_joint: 0.7964398860931396
+  wrist_1_joint: -1.9218741856017054
+  wrist_2_joint: -1.6183198134051722
+  wrist_3_joint: 3.1361374855041504
+
+# real_pick_position updated 2026-09-01 (red lego), retaught with the real gripper/camera attached
+# (previous 2026-08-31 value below was taught before that hardware was on the arm):
+# elbow_joint: -1.3556658029556274
+# shoulder_lift_joint: -2.2661076984801234
+# shoulder_pan_joint: -3.1535030047046106
+# wrist_1_joint: -1.0624717634967347
+# wrist_2_joint: 1.5712707042694092
+# wrist_3_joint: 1.6571063995361328
+real_pick_position:
+  elbow_joint: 0.8214104811297815
+  shoulder_lift_joint: -0.6223648947528382
+  shoulder_pan_joint: -0.4695704619037073
+  wrist_1_joint: -1.8040539226927699
+  wrist_2_joint: -1.5907400290118616
+  wrist_3_joint: 3.1361775398254395
+
+# real_pregrasp_position (2026-09-03): a custom approach height above real_pick_position,
+# Freedrive-taught by hand (not computed from sim's 22cm GRIPPER_OFFSET_M+HANDOFF_STANDOFF_M
+# value -- per this file's own real_pick_and_place.py caution against guessing/computing new
+# real waypoints, given the prior self-collision incident from a computed pose). shoulder_pan
+# is ~unchanged from real_pick_position (-0.4697 vs -0.4696), consistent with a roughly
+# vertical approach above the same pick spot. Not yet wired into real_pick_and_place.py's
+# sequence or motion-tested -- captured via a one-shot /joint_states echo only.
+real_pregrasp_position:
+  elbow_joint: 0.9765928427325647
+  shoulder_lift_joint: -0.8716982764056702
+  shoulder_pan_joint: -0.4697054068194788
+  wrist_1_joint: -1.7639504871764125
+  wrist_2_joint: -1.6379006544696253
+  wrist_3_joint: 3.214547872543335
+
+# real_look_position (2026-09-01): a distinct pose for the wrist camera to see the cube,
+# separate from real_pick_position -- at the pick pose the camera (mounted just behind the
+# gripper) is too close to the table/rail to have any usable field of view at all (confirmed
+# live: a snapshot from real_pick_position showed an extreme close-up of a rail, no cube
+# visible). Freedrive-taught by directly aiming the camera until the cube was in frame.
+# Confirmed working: sim-trained YOLO model (YoloV8_v2/runs/lego_color_20ep/weights/best.pt)
+# detects the real cube from this pose at ~80-89% confidence, tight bounding box, despite the
+# frame being somewhat out of focus (autofocus was off during this test).
+real_look_position:
+  elbow_joint: 0.8215182463275355
+  shoulder_lift_joint: -0.922241286640503
+  shoulder_pan_joint: -0.46934253374208623
+  wrist_1_joint: -1.4033101213029404
+  wrist_2_joint: -1.5804842154132288
+  wrist_3_joint: 3.136169672012329

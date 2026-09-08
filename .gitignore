@@ -1,0 +1,13 @@
+build/
+install/
+log/
+rl_logs/
+YoloV8_v2/runs/detect/
+YoloV8_v2/train/
+YoloV8_v2/valid/
+YoloV8_v2/test_images/
+__pycache__/
+*.pyc
+*.zip
+*.pkl
+.vscode/
