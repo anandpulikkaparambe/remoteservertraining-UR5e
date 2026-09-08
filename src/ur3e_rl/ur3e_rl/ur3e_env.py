@@ -119,7 +119,19 @@ class UR3eEnv(gym.Env):
         # reverted from a widened 90-step two-phase budget back to this, since the
         # release-phase leg it was padding for no longer exists). A first estimate needing
         # a real sweep, not a tuned value.
-        self.max_episode_steps = 50  # Safety timeout per episode (does NOT reduce total training steps)
+        #
+        # Pure-RL toggle (2026-09-09, Vast.ai experimental track): UR3E_USE_CLASSICAL_HANDOFF
+        # (default "true", unchanged behavior) lets reset() skip Phase A's MoveIt/OMPL
+        # handoff entirely when set to "false" -- RL then controls the arm from the fixed
+        # home pose all the way to grasp, not just the final approach. The reward function
+        # and kill-switches were already start-distance-agnostic (see the Target Lost
+        # kill-switch's own comment further down, already written to tolerate a large
+        # starting EE-to-target distance) -- the only thing that mechanically needs to
+        # change for a full-reach episode is this step budget, back to the project's own
+        # prior full-traversal value. Still a first estimate, not re-tuned for this exact
+        # home pose / lego position -- expect to revisit after a real run.
+        self.use_classical_handoff = os.environ.get('UR3E_USE_CLASSICAL_HANDOFF', 'true').lower() == 'true'
+        self.max_episode_steps = 50 if self.use_classical_handoff else 500  # Safety timeout per episode (does NOT reduce total training steps)
 
         # Phase A (classical) handoff bridge -- drives the arm to the pre-grasp standoff via
         # OMPL/MoveIt at the start of every reset(), before RL (Phase B) takes over.
@@ -128,6 +140,14 @@ class UR3eEnv(gym.Env):
         )
         self.last_handoff_pose = [0.0, 0.0, 0.0]
         self.last_handoff_ok = False
+
+        # Ground-truth-vs-YOLO diagnostic (2026-09-09, Vast.ai experimental track): only
+        # populated once per episode, in perception mode, purely for logging -- see
+        # reset()'s perception branch and _fetch_ground_truth_target_pose(). The RL-visible
+        # self.target_pose always stays the raw perception value; this is not used to
+        # correct/blend it. None until the first successful comparison.
+        self.last_ground_truth_pose = [0.0, 0.0, 0.0]
+        self.last_perception_error_m = None
 
         # --- Curriculum-widened reach (2026-09-04) ---
         # curriculum_level was previously computed correctly by train_sac.py's
@@ -275,7 +295,11 @@ class UR3eEnv(gym.Env):
                 # Curriculum-widened reach (2026-09-04): Handoff_OK above already lets a
                 # rising handoff-failure rate at higher curriculum levels be cross-checked
                 # against these two new columns -- see the implementation spec's §1d.
-                "Standoff_M", "Spawn_Radius_M", "Contact_Detected"
+                "Standoff_M", "Spawn_Radius_M", "Contact_Detected",
+                # Ground-truth-vs-YOLO diagnostic (2026-09-09): only populated in
+                # perception mode, once per episode -- see reset()'s perception branch.
+                # Blank in ground_truth mode (nothing to compare against itself).
+                "GT_X", "GT_Y", "GT_Z", "Perception_Error_M"
             ]
             writer.writerow(headers)
             
@@ -450,10 +474,20 @@ class UR3eEnv(gym.Env):
         if self._target_pose_valid:
             return  # already have a real value cached for this episode
 
+        gt_pose = self._fetch_ground_truth_target_pose()
+        if gt_pose is not None:
+            self.target_pose = gt_pose
+            self._target_pose_valid = True
+
+    def _fetch_ground_truth_target_pose(self):
+        """Ground-truth lego position (base_link frame), via Gazebo's own pose info --
+        the same query/transform this method's caller used inline before it was pulled out
+        here (2026-09-09) so the perception-mode diagnostic in reset() below can reuse it
+        for logging without duplicating the subprocess+transform logic. Returns None on
+        query/transform failure -- callers keep whatever they already had."""
         gz_pos = self._get_gz_object_position('lego_red')
         if gz_pos is None:
-            return  # keep last known position (zero-init only before the first successful fetch)
-
+            return None
         try:
             world_pose = PoseStamped()
             world_pose.header.frame_id = 'world'
@@ -463,14 +497,14 @@ class UR3eEnv(gym.Env):
             base_pose = self.tf_buffer.transform(
                 world_pose, 'base_link', timeout=rclpy.duration.Duration(seconds=0.2)
             )
-            self.target_pose = np.array([
+            return np.array([
                 base_pose.pose.position.x,
                 base_pose.pose.position.y,
                 base_pose.pose.position.z
             ], dtype=np.float32)
-            self._target_pose_valid = True
         except Exception as e:
             self.node.get_logger().warn(f'Could not transform gz ground-truth lego pose into base_link: {e}')
+            return None
 
     def _update_target_pose_from_perception(self):
         """ target_source == 'perception' branch of _update_target_pose. Transforms
@@ -865,6 +899,8 @@ class UR3eEnv(gym.Env):
                     "" if placement_error_m is None else f"{placement_error_m:.4f}",
                     f"{self.current_standoff_m:.4f}", f"{self.current_spawn_radius_m:.4f}",
                     contact_detected,
+                    f"{self.last_ground_truth_pose[0]:.4f}", f"{self.last_ground_truth_pose[1]:.4f}", f"{self.last_ground_truth_pose[2]:.4f}",
+                    "" if self.last_perception_error_m is None else f"{self.last_perception_error_m:.4f}",
                 ]
                 writer.writerow(row)
         except Exception as e:
@@ -1009,8 +1045,41 @@ class UR3eEnv(gym.Env):
         # _wait_for_safe_home() above -- no spin_once() needed, background thread handles it).
         time.sleep(0.3)
 
+        # Perception-mode freshness guard (2026-09-09, Vast.ai experimental track): without
+        # this, the first _update_target_pose() call below could read a detection cached
+        # from *before* the respawn above (self._perception_pose is never cleared on
+        # respawn, and _perception_pose_stamp was captured but never actually checked
+        # anywhere). Bounded wait, not a hard requirement -- background spin thread (same
+        # one _wait_for_safe_home() relies on) keeps processing _perception_pose_callback
+        # in parallel, so this just gives it a chance to catch up; falls through and uses
+        # whatever's available (fresh or not) once the cap is hit rather than blocking
+        # the episode indefinitely on a perception pipeline hiccup.
+        if self.target_source == 'perception':
+            respawn_time = self.node.get_clock().now()
+            wait_deadline = time.time() + 1.0
+            while time.time() < wait_deadline:
+                if self._perception_pose_stamp is not None and self._perception_pose_stamp > respawn_time:
+                    break
+                time.sleep(0.05)
+
         # Update to physical lego position instead of theoretical random boxes
         self._update_target_pose()
+
+        # Ground-truth-vs-YOLO diagnostic (2026-09-09): logged, not used to correct the
+        # RL-visible target_pose above -- see _fetch_ground_truth_target_pose()'s docstring.
+        # Once per episode (not per step) for the same reason the ground-truth path itself
+        # only queries Gazebo once per episode -- see _update_target_pose()'s own note on
+        # why a subprocess per training step would make training crawl.
+        if self.target_source == 'perception':
+            gt_pose = self._fetch_ground_truth_target_pose()
+            if gt_pose is not None:
+                self.last_ground_truth_pose = gt_pose
+                self.last_perception_error_m = float(np.linalg.norm(self.target_pose - gt_pose))
+                self.node.get_logger().info(
+                    f"Perception-vs-ground-truth error this episode: "
+                    f"{self.last_perception_error_m:.4f}m "
+                    f"(YOLO {self.target_pose.tolist()}, GT {gt_pose.tolist()})"
+                )
 
         # --- Phase A: classical handoff (hybrid planner+RL spec, Recommendation 3) ---
         # MoveIt/OMPL drives tool0 from the safe home pose to a pre-grasp standoff above the
@@ -1024,26 +1093,34 @@ class UR3eEnv(gym.Env):
         # 1) instead of the fixed 5cm this project used for its entire history through
         # today -- see MIN/MAX_STANDOFF_M in __init__. curriculum_level=0 reproduces the
         # exact old fixed 5cm behavior.
-        self.current_standoff_m = (
-            self.MIN_STANDOFF_M
-            + self.curriculum_level * (self.MAX_STANDOFF_M - self.MIN_STANDOFF_M)
-        )
-        handoff_ok, handoff_pose = self.handoff_bridge.handoff_to_pregrasp(
-            self.target_pose, standoff_m=self.current_standoff_m
-        )
-        self.last_handoff_pose = handoff_pose
-        self.last_handoff_ok = handoff_ok
-        if handoff_ok:
-            self.node.get_logger().info(
-                f"Handoff OK -> pre-grasp [{handoff_pose[0]:.3f}, {handoff_pose[1]:.3f}, {handoff_pose[2]:.3f}]"
+        #
+        # Pure-RL toggle (2026-09-09): skipped entirely when self.use_classical_handoff is
+        # False -- RL then starts every episode at the home pose set above, not a pre-grasp
+        # standoff, and controls the full reach itself. last_handoff_pose/last_handoff_ok
+        # stay at their __init__ zero-init defaults in this case (CSV logging already
+        # handles that gracefully -- these columns just always read the same as a fresh,
+        # never-handed-off episode).
+        if self.use_classical_handoff:
+            self.current_standoff_m = (
+                self.MIN_STANDOFF_M
+                + self.curriculum_level * (self.MAX_STANDOFF_M - self.MIN_STANDOFF_M)
             )
-        else:
-            self.node.get_logger().warn(
-                "Classical handoff to pre-grasp did not verify -- starting RL episode from "
-                "wherever the arm actually ended up. step()'s kill-switches will catch a "
-                "genuinely unsafe state on the first step rather than this silently "
-                "pretending the handoff succeeded."
+            handoff_ok, handoff_pose = self.handoff_bridge.handoff_to_pregrasp(
+                self.target_pose, standoff_m=self.current_standoff_m
             )
+            self.last_handoff_pose = handoff_pose
+            self.last_handoff_ok = handoff_ok
+            if handoff_ok:
+                self.node.get_logger().info(
+                    f"Handoff OK -> pre-grasp [{handoff_pose[0]:.3f}, {handoff_pose[1]:.3f}, {handoff_pose[2]:.3f}]"
+                )
+            else:
+                self.node.get_logger().warn(
+                    "Classical handoff to pre-grasp did not verify -- starting RL episode from "
+                    "wherever the arm actually ended up. step()'s kill-switches will catch a "
+                    "genuinely unsafe state on the first step rather than this silently "
+                    "pretending the handoff succeeded."
+                )
 
         state = self._get_obs()
 

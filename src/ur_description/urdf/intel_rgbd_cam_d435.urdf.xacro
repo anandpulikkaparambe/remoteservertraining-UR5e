@@ -122,6 +122,31 @@
     <visualize>true</visualize>
     <topic>/wrist_camera/image_raw</topic>
   </sensor>
+
+  <!-- Depth sensor (2026-09-09, Vast.ai pure-RL/wrist-camera experimental track): the RGB
+       sensor above existed already, but yolo_detector.py's 3D back-projection needs a
+       per-pixel depth reading, which nothing on this camera provided before. Mirrors the
+       overhead camera's depth_camera sensor (pick_and_place_demo.world), same
+       FOV/resolution/clip as the RGB sensor above, R_FLOAT32 format to match. -->
+  <sensor name="camera_head_depth" type="depth_camera">
+    <update_rate>10</update_rate>
+    <topic>/wrist_camera/depth_image</topic>
+    <camera>
+      <horizontal_fov>1.5184</horizontal_fov>
+      <image>
+        <width>424</width>
+        <height>240</height>
+        <format>R_FLOAT32</format>
+      </image>
+      <clip>
+        <near>0.05</near>
+        <far>1.5</far>
+      </clip>
+    </camera>
+    <always_on>1</always_on>
+    <gz_frame_id>${prefix}camera_head_link</gz_frame_id>
+    <visualize>true</visualize>
+  </sensor>
 </gazebo>
 
 

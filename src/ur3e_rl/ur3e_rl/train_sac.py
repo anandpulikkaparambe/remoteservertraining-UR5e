@@ -100,9 +100,18 @@ def main():
     else:
         env = DummyVecEnv([_make_env(0, '')])
 
-    log_dir = "./rl_logs/"
+    # Pure-RL/wrist-camera experimental track (2026-09-09): reads the same
+    # UR3E_USE_CLASSICAL_HANDOFF toggle ur3e_env.py's UR3eEnv.__init__ does, purely to pick
+    # a distinct checkpoint namespace here -- this architecture's start-state distribution
+    # (home pose, not post-handoff standoff) and step budget (500, not 50) are different
+    # enough that its checkpoints are not valid --resume targets for the hybrid
+    # architecture's "justrl" runs already in ./rl_logs/, and vice versa. Same rationale as
+    # the name_prefix note below, just for a second architecture generation instead of a
+    # second cold-start run of the same one.
+    _use_classical_handoff = os.environ.get('UR3E_USE_CLASSICAL_HANDOFF', 'true').lower() == 'true'
+    log_dir = "./rl_logs/" if _use_classical_handoff else "./rl_logs/purerl_yolo/"
     os.makedirs(log_dir, exist_ok=True)
-    
+
     # save_replay_buffer=True: previously only network weights were checkpointed, so a
     # --resume always cold-started the replay buffer regardless of how much off-policy
     # data the prior run had collected (see hybrid planner+RL spec section 6).
@@ -121,7 +130,7 @@ def main():
     checkpoint_callback = CheckpointCallback(
         save_freq=2000,
         save_path=log_dir,
-        name_prefix="justrl",
+        name_prefix="justrl" if _use_classical_handoff else "purerl_yolo",
         save_replay_buffer=True
     )
 

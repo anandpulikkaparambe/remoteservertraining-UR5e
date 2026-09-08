@@ -209,7 +209,10 @@ def generate_launch_description():
     # Gazebo launch. -s (server-only, no GUI window) when headless:=true -- the gzclient
     # GUI is the single heaviest process in this stack (CPU+RAM), so any instance beyond
     # the first should normally run headless.
-    gz_args_flags = PythonExpression(["'-s -r -v 4 ' if '", headless, "' == 'true' else '-r -v 4 '"])
+    # -v 1 (2026-09-09): was -v 4 (max debug verbosity) -- confirmed live this wrote
+    # 20,000+ log lines within a few minutes per instance on a Vast.ai run, real I/O
+    # overhead for output nobody was reading. -v 1 keeps errors/warnings, drops debug spam.
+    gz_args_flags = PythonExpression(["'-s -r -v 1 ' if '", headless, "' == 'true' else '-r -v 1 '"])
     start_gazebo_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(pkg_ros_gz_sim, 'launch', 'gz_sim.launch.py')

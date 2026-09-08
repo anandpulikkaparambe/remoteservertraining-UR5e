@@ -9,7 +9,12 @@
         <featherstone>true</featherstone>
       </bullet>
       <max_step_size>0.001</max_step_size>
-      <real_time_factor>1</real_time_factor>
+      <!-- Uncapped (2026-09-09): was hardcoded to 1 (real-time), throttling headless
+           training to wall-clock pace even with idle CPU to spare; confirmed live on a
+           Vast.ai instance (load average 7-8/16 while training throughput stayed flat).
+           0 = run physics as fast as the CPU allows; max_step_size above (fidelity) is
+           unchanged, only pacing changes. -->
+      <real_time_factor>0</real_time_factor>
       <damping>0.1</damping>
       <gravity>0.0 0.0 -9.8</gravity>
     </physics>

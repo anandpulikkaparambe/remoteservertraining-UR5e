@@ -84,3 +84,14 @@
   qos:
     reliability: "best_effort"
     durability: "volatile"
+
+# Wrist Camera Depth (2026-09-09, pure-RL/wrist-camera experimental track -- pairs with
+# the new camera_head_depth sensor in intel_rgbd_cam_d435.urdf.xacro)
+- ros_topic_name: "/wrist_camera/depth_image"
+  gz_topic_name: "/wrist_camera/depth_image"
+  ros_type_name: "sensor_msgs/msg/Image"
+  gz_type_name: "gz.msgs.Image"
+  direction: GZ_TO_ROS
+  qos:
+    reliability: "best_effort"
+    durability: "volatile"

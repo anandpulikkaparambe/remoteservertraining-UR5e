@@ -10,6 +10,9 @@ from ultralytics import YOLO
 import numpy as np
 
 from rclpy.qos import qos_profile_sensor_data
+from tf2_ros.buffer import Buffer
+from tf2_ros.transform_listener import TransformListener
+import tf2_geometry_msgs  # noqa: F401 -- registers PoseStamped conversions for Buffer.transform()
 
 DEFAULT_MODEL_PATH = os.environ.get(
     'YOLO_MODEL_PATH',
@@ -39,47 +42,49 @@ class YoloDetector(Node):
         self.bridge = CvBridge()
         
         # Subscribers (Using qos_profile_sensor_data for maximum compatibility)
+        # 2026-09-09 (Vast.ai pure-RL/wrist-camera experimental track): switched from the
+        # fixed overhead camera (/camera/...) to the wrist-mounted D435
+        # (/wrist_camera/...) -- the real robot's actual camera placement, unlike the
+        # overhead one which doesn't exist on the real rig. See
+        # intel_rgbd_cam_d435.urdf.xacro's new camera_head_depth sensor (the wrist camera
+        # previously had no depth stream at all) and ros_gz_bridge.yaml's matching bridge
+        # entry.
         self.image_sub = self.create_subscription(
-            Image, 
-            '/camera/image_raw', 
-            self.image_callback, 
+            Image,
+            '/wrist_camera/image_raw',
+            self.image_callback,
             qos_profile_sensor_data
         )
         # Depth is published as RELIABLE by gz_bridge, so we must match it.
         # RGB seems to work with sensor_data, but Depth is stricter.
         self.depth_sub = self.create_subscription(
-            Image, 
-            '/camera/depth_image', 
-            self.depth_callback, 
+            Image,
+            '/wrist_camera/depth_image',
+            self.depth_callback,
             10
         )
-        
+
         self.latest_depth_msg = None
 
-        # Camera Intrinsics (Simulation Default)
-        # FOV = 1.1 rad (~63 deg), Width = 640
-        self.width = 640
-        self.height = 480
-        self.fov = 1.1
+        # Camera Intrinsics -- wrist D435 real values (2026-09-09), not the overhead
+        # camera's guessed 640x480/1.1rad. Matches camera_head's <camera> block in
+        # intel_rgbd_cam_d435.urdf.xacro exactly (horizontal_fov=1.5184, 424x240).
+        self.width = 424
+        self.height = 240
+        self.fov = 1.5184
         self.focal_length = self.width / (2 * np.tan(self.fov / 2))
         self.cx = self.width / 2
         self.cy = self.height / 2
-        
-        # Camera Extrinsics (World -> Camera)
-        # Matches <model name="camera"> in pick_and_place_demo.world
-        # Pose: 0.3 0.0 1.5
-        self.cam_x_w = 0.3
-        self.cam_y_w = 0.0
-        self.cam_z_w = 1.5
-        
-        # NOTE: Coordinate mapping depends on how the camera frame is oriented relative to world.
-        # If camera is rotated -90deg around Y (looking down):
-        # Image X -> World -Y
-        # Image Y -> World -X
-        # Depending on the specific TF tree. The previous code assumed:
-        # X_w = Y_c
-        # Y_w = self.cam_y_w - X_c ...
-        # We will keep the logic structure but update the offsets.
+
+        # Camera Extrinsics (2026-09-09): the wrist camera moves with the arm every step,
+        # unlike the overhead camera this file used to assume -- a fixed world-frame offset
+        # (the old cam_x_w/y_w/z_w constants) would be wrong the instant the arm moves off
+        # its spawn pose. Extrinsics are now looked up live via TF in image_callback
+        # instead (see CAMERA_OPTICAL_FRAME below), not stored as constants here.
+        CAMERA_OPTICAL_FRAME = 'camera_head_color_optical_frame'
+        self.camera_optical_frame = CAMERA_OPTICAL_FRAME
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
 
         # Publishers
         self.pose_pub = self.create_publisher(PoseStamped, '/detected_object_pose', 10)
@@ -144,13 +149,18 @@ class YoloDetector(Node):
                 center_y = (y1 + y2) // 2
 
                 # --- SEARCH ZONE CONFIG ---
-                # --- SEARCH ZONE CONFIG ---
-                # Robot is on Bottom-Left. Legos are Top/Center.
-                # Rotated 90deg: Horizontal Zone (Top Strip)
-                ROI_X_MIN = 0 
-                ROI_X_MAX = 640
+                # 2026-09-09: scaled to self.width/self.height (was hardcoded 640/380 for
+                # the overhead camera's 640x480 frame -- on the wrist camera's 424x240
+                # frame those constants exceeded the actual image, silently making the ROI
+                # filter a no-op). The original rationale (cut off the bottom strip to
+                # exclude the robot base) was derived from the overhead view; the wrist
+                # camera's occlusion pattern is different (arm/gripper can appear anywhere
+                # in frame depending on pose) -- kept as a proportional analog for now
+                # rather than redesigned, flagged here rather than assumed still correct.
+                ROI_X_MIN = 0
+                ROI_X_MAX = self.width
                 ROI_Y_MIN = 0
-                ROI_Y_MAX = 380 # Cut off Bottom 100px (Robot Base)
+                ROI_Y_MAX = int(self.height * 380 / 480)  # same ~79% cutoff fraction as before
                 
                 # Visualize Search Zone (Blue Box)
                 cv2.rectangle(cv_image, (ROI_X_MIN, ROI_Y_MIN), (ROI_X_MAX, ROI_Y_MAX), (255, 255, 0), 2)
@@ -253,77 +263,68 @@ class YoloDetector(Node):
         # If we found a target
         if best_lego:
             cX, cY, Z_c = best_lego
-            
-            # --- 3D Projection Math (From perception_node.py) ---
-            # 1. Camera Frame
+
+            # --- 3D Projection Math ---
+            # 1. Camera (optical) frame -- standard pinhole convention: X=right, Y=down,
+            #    Z=forward. This part is unchanged and correct regardless of where the
+            #    camera physically is.
             X_c = (cX - self.cx) * Z_c / self.focal_length
-            Y_c = (cY - self.cy) * Z_c / self.focal_length 
-            
-            # 2. World Frame Transformation
-            # Matches calibration in perception_node.py
-            # & Update 2026: Matches World file <model name="camera"> pose 0.3 0.0 2.0
-            
-            # Camera logic: Looking down (-Z), Top is -Y?
-            # Standard Optical Frame: Z=Forward, X=Right, Y=Down.
-            # Camera Pose (World): X=0.3, Y=0.0, Z=2.0. R=0 P=1.57 (90) Y=0.
-            # Rotation Matrix for Pitch=90:
-            # X_w = Z_c + 0.3 (No, wait)
-            # Let's trust the empirical logic from before but adjust offsets:
-            
-            # Previous logic:
-            # X_w = Y_c
-            # Y_w = self.cam_y_w - X_c ...
-            
-            # Let's stick to the previous working algebraic form but with NEW params:
-            # cam_x_w = 0.3, cam_y_w = 0.0, cam_z_w = 2.0
-            
-            # If Image X (Right) corresponds to World -Y
-            # If Image Y (Down) corresponds to World -X
-            
-            X_w = self.cam_x_w - Y_c # Vertical offset in image -> World X
-            Y_w = self.cam_y_w - X_c # Horizontal offset in image -> World Y
-            
-            # Z Calibration Hack:
-            # The depth sensor is noisy or calibration is drifting (Reading 1.0m instead of 0.8m).
-            # Since we know the objects are ON THE TABLE (Z=0.8), let's hardcode the Z height.
-            # Grid surface = 0.8. Lego center ~ 0.8 + 0.015 = 0.815.
-            Z_w = 0.815 
-            
-            # Refine empirical offsets
-            Y_w += 0.0
-            
-            # Publish Pose
-            pose_msg = PoseStamped()
-            pose_msg.header = rgb_msg.header
-            pose_msg.header.frame_id = 'world'
-            pose_msg.pose.position.x = X_w
-            pose_msg.pose.position.y = Y_w
-            pose_msg.pose.position.z = Z_w 
-            pose_msg.pose.orientation.w = 1.0 
-            
-            self.pose_pub.publish(pose_msg)
-            
-            # --- PUBLISH VISUAL MARKER FOR RVIZ ---
-            from visualization_msgs.msg import Marker
-            marker = Marker()
-            marker.header.frame_id = "world"
-            marker.id = 999
-            marker.type = Marker.CUBE
-            marker.action = Marker.ADD
-            marker.pose.position = pose_msg.pose.position
-            # Shift marker up slightly so it sits ON the table, not halfway through
-            marker.pose.position.z += 0.01 
-            marker.scale.x = 0.032; marker.scale.y = 0.064; marker.scale.z = 0.02 # 2x4 Brick
-            marker.color.a = 1.0
-            
-            # Set Color based on Class
-            if detected_class == 'Red': marker.color.r = 1.0; marker.color.g = 0.0; marker.color.b = 0.0
-            elif detected_class == 'Blue': marker.color.r = 0.0; marker.color.g = 0.0; marker.color.b = 1.0
-            elif detected_class == 'Green': marker.color.r = 0.0; marker.color.g = 1.0; marker.color.b = 0.0
-            elif detected_class == 'Yellow': marker.color.r = 1.0; marker.color.g = 1.0; marker.color.b = 0.0
-            else: marker.color.r = 1.0; marker.color.g = 1.0; marker.color.b = 1.0 # White default
-            
-            self.marker_pub.publish(marker)
+            Y_c = (cY - self.cy) * Z_c / self.focal_length
+
+            # 2. Camera-frame -> world-frame, via a LIVE TF lookup (2026-09-09).
+            # The wrist camera moves with the arm every step, unlike the old fixed
+            # overhead camera this file used to assume -- a static algebraic offset
+            # (the previous X_w = cam_x_w - Y_c / Z_w = 0.815 hack) would only ever be
+            # correct for the one arm pose it happened to be tuned against. Transforms
+            # the raw camera-frame point through whatever the current
+            # camera_head_color_optical_frame -> world transform actually is, same
+            # tf_buffer.transform(...) pattern ur3e_env.py's
+            # _update_target_pose_from_perception already uses for its own world->
+            # base_link step.
+            try:
+                camera_pose = PoseStamped()
+                camera_pose.header.frame_id = self.camera_optical_frame
+                camera_pose.header.stamp = rclpy.time.Time().to_msg()
+                camera_pose.pose.position.x = float(X_c)
+                camera_pose.pose.position.y = float(Y_c)
+                camera_pose.pose.position.z = float(Z_c)
+                camera_pose.pose.orientation.w = 1.0
+                pose_msg = self.tf_buffer.transform(
+                    camera_pose, 'world', timeout=rclpy.duration.Duration(seconds=0.2)
+                )
+                pose_msg.header = rgb_msg.header
+                pose_msg.header.frame_id = 'world'
+            except Exception as e:
+                self.get_logger().warn(
+                    f"Could not transform detection from {self.camera_optical_frame} "
+                    f"into world: {e}"
+                )
+                pose_msg = None
+
+            if pose_msg is not None:
+                self.pose_pub.publish(pose_msg)
+
+                # --- PUBLISH VISUAL MARKER FOR RVIZ ---
+                from visualization_msgs.msg import Marker
+                marker = Marker()
+                marker.header.frame_id = "world"
+                marker.id = 999
+                marker.type = Marker.CUBE
+                marker.action = Marker.ADD
+                marker.pose.position = pose_msg.pose.position
+                # Shift marker up slightly so it sits ON the table, not halfway through
+                marker.pose.position.z += 0.01
+                marker.scale.x = 0.032; marker.scale.y = 0.064; marker.scale.z = 0.02 # 2x4 Brick
+                marker.color.a = 1.0
+
+                # Set Color based on Class
+                if detected_class == 'Red': marker.color.r = 1.0; marker.color.g = 0.0; marker.color.b = 0.0
+                elif detected_class == 'Blue': marker.color.r = 0.0; marker.color.g = 0.0; marker.color.b = 1.0
+                elif detected_class == 'Green': marker.color.r = 0.0; marker.color.g = 1.0; marker.color.b = 0.0
+                elif detected_class == 'Yellow': marker.color.r = 1.0; marker.color.g = 1.0; marker.color.b = 0.0
+                else: marker.color.r = 1.0; marker.color.g = 1.0; marker.color.b = 1.0 # White default
+
+                self.marker_pub.publish(marker)
             # --------------------------------------
 
         # Publish debug image
