@@ -1132,8 +1132,13 @@ class UR3eEnv(gym.Env):
 
         info = {
             'target_pose': self.target_pose,
-            'handoff_pose': handoff_pose,
-            'handoff_ok': handoff_ok,
+            # self.last_handoff_pose/last_handoff_ok, not the local handoff_pose/handoff_ok
+            # -- those only exist inside the `if self.use_classical_handoff:` block above,
+            # UnboundLocalError'd here the moment that block is skipped (confirmed live).
+            # self.last_* already holds the right value either way (zero-init defaults
+            # when handoff is off, set from the local vars when it's on).
+            'handoff_pose': self.last_handoff_pose,
+            'handoff_ok': self.last_handoff_ok,
             'standoff_m': self.current_standoff_m,
             'spawn_radius_m': self.current_spawn_radius_m,
         }

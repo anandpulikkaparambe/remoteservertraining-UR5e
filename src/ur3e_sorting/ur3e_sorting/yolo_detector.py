@@ -95,7 +95,7 @@ class YoloDetector(Node):
         self.marker_pub = self.create_publisher(Marker, '/detected_object_marker', 10)
 
         self.get_logger().info('YoloDetector Node Initialized (Async Depth)')
-        self.get_logger().info(f'Params: fx={self.focal_length:.2f}, cam_z={self.cam_z_w}')
+        self.get_logger().info(f'Params: fx={self.focal_length:.2f}, optical_frame={self.camera_optical_frame}')
 
     def depth_callback(self, msg):
         self.latest_depth_msg = msg
