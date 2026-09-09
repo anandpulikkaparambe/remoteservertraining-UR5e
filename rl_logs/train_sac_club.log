@@ -1,0 +1,160 @@
+[INFO] [1788937195.326977209] [ur3e_rl_env_node_0]: UR5e Gymnasium Environment 0 Initialized
+Initializing UR5e Gazebo Environment for SAC (1 parallel instance(s))...
+Initializing new SAC Agent...
+Using cpu device
+Starting Training Loop...
+Logging to ./rl_logs/purerl_yolo/justrl_1
+---------------------------------
+| rollout/           |          |
+|    success_rate    | 0        |
+| time/              |          |
+|    episodes        | 4        |
+|    fps             | 5        |
+|    time_elapsed    | 364      |
+|    total_timesteps | 2000     |
+| train/             |          |
+|    actor_loss      | -40.3    |
+|    critic_loss     | 0.0712   |
+|    ent_coef        | 0.827    |
+|    ent_coef_loss   | -1.58    |
+|    learning_rate   | 0.0001   |
+|    n_updates       | 1899     |
+---------------------------------
+---------------------------------
+| rollout/           |          |
+|    success_rate    | 0        |
+| time/              |          |
+|    episodes        | 8        |
+|    fps             | 5        |
+|    time_elapsed    | 767      |
+|    total_timesteps | 4000     |
+| train/             |          |
+|    actor_loss      | -68.9    |
+|    critic_loss     | 0.0648   |
+|    ent_coef        | 0.677    |
+|    ent_coef_loss   | -3.24    |
+|    learning_rate   | 0.0001   |
+|    n_updates       | 3899     |
+---------------------------------
+---------------------------------
+| rollout/           |          |
+|    success_rate    | 0        |
+| time/              |          |
+|    episodes        | 12       |
+|    fps             | 4        |
+|    time_elapsed    | 1325     |
+|    total_timesteps | 6000     |
+| train/             |          |
+|    actor_loss      | -88.8    |
+|    critic_loss     | 0.0363   |
+|    ent_coef        | 0.554    |
+|    ent_coef_loss   | -4.88    |
+|    learning_rate   | 0.0001   |
+|    n_updates       | 5899     |
+---------------------------------
+---------------------------------
+| rollout/           |          |
+|    success_rate    | 0        |
+| time/              |          |
+|    episodes        | 16       |
+|    fps             | 3        |
+|    time_elapsed    | 2083     |
+|    total_timesteps | 8000     |
+| train/             |          |
+|    actor_loss      | -101     |
+|    critic_loss     | 0.0439   |
+|    ent_coef        | 0.454    |
+|    ent_coef_loss   | -6.53    |
+|    learning_rate   | 0.0001   |
+|    n_updates       | 7899     |
+---------------------------------
+[WARN] [1788939992.431046150] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788939995.496129220] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788939998.672797597] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940001.865917668] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940258.101093993] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940261.166360427] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+---------------------------------
+| rollout/           |          |
+|    success_rate    | 0        |
+| time/              |          |
+|    episodes        | 20       |
+|    fps             | 3        |
+|    time_elapsed    | 3064     |
+|    total_timesteps | 10000    |
+| train/             |          |
+|    actor_loss      | -110     |
+|    critic_loss     | 0.0363   |
+|    ent_coef        | 0.372    |
+|    ent_coef_loss   | -8.2     |
+|    learning_rate   | 0.0001   |
+|    n_updates       | 9899     |
+---------------------------------
+[WARN] [1788940264.360161651] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940267.532048322] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940270.764142364] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940273.945998709] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940277.142986420] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940280.335069300] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940283.567110938] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940286.738839800] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940289.915990109] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940293.117156521] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940296.309031406] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940299.496054891] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940302.668973191] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940305.839112279] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940309.022145365] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940312.199330413] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940315.430127090] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940318.607826279] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940321.780798168] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940324.959168540] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940328.178278937] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940331.382787027] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940334.554661035] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940337.726634509] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940340.929430080] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940344.126966450] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940347.309159038] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940350.491152171] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940353.725991214] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940356.908192735] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940360.100193969] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940363.289748799] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940366.502192817] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940369.699231996] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940372.916122943] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940376.104183407] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940379.276133133] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940382.478243347] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940385.756996085] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940388.934117399] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940392.111187542] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940395.338563878] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940398.511536652] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940401.693276606] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940639.334119512] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940642.397496444] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940645.604136022] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940648.843154714] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940652.052176241] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940655.250515446] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940658.442596683] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940661.693113479] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940664.879695734] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940668.052133582] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940671.223775355] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940674.453126276] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940677.701124685] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940680.877803718] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940684.054434471] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940687.231232195] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940690.419170061] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940693.606299934] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940696.783135015] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940699.954866363] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940703.153988939] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940706.353737190] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940709.540164638] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1788940712.718814039] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
