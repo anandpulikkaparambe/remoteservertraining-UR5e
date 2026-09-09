@@ -186,12 +186,22 @@ class YoloDetector(Node):
                      continue
 
                 # 1. Size Filter
-                # Real Lego is likely 2000-4000. Large Ghost is >10000.
-                if area > 8000: # Tightened from 12000
+                # 2026-09-09: was a hardcoded 8000px absolute ceiling, tuned for the
+                # overhead camera's 640x480 frame from ~1.2m away. Confirmed live on the
+                # wrist camera (424x240, much closer working range): genuine Red
+                # detections from the new pure-RL home pose land around 22000px --
+                # ~5x over that ceiling on a frame with less than half the total pixels,
+                # simply because the object is closer and the frame is smaller, not
+                # because they're spurious. A fraction of the actual frame area scales
+                # with resolution/distance instead of carrying over a number tuned for a
+                # completely different camera; 0.35 gives headroom above the observed
+                # ~22000px (~22% of this frame) while still excluding near-frame-filling
+                # false positives.
+                if area > 0.35 * self.width * self.height:
                     self.get_logger().info(f"  -> REJECTED {class_name}: Too Big ({area})")
-                    continue 
-                if area < 50: 
-                    continue 
+                    continue
+                if area < 50:
+                    continue
                     
                 # 2. Aspect Ratio Filter (Relaxed)
                 if aspect_ratio < 0.2 or aspect_ratio > 5.0: 
@@ -292,8 +302,25 @@ class YoloDetector(Node):
                 pose_msg = self.tf_buffer.transform(
                     camera_pose, 'world', timeout=rclpy.duration.Duration(seconds=0.2)
                 )
-                pose_msg.header = rgb_msg.header
-                pose_msg.header.frame_id = 'world'
+                # NaN guard (2026-09-09): confirmed live -- "RuntimeWarning: invalid value
+                # encountered in matmul" from tf2_geometry_msgs, and one resulting
+                # published pose with a nonsensical negative Z (-0.80m, below the floor).
+                # The wrist camera's TF chain updates every step as the arm moves,
+                # unlike the old fixed overhead camera's static transform -- an
+                # occasional degenerate/still-settling transform (e.g. right as the arm
+                # finishes a motion) can produce a garbage rotation. Reject rather than
+                # publish and poison the RL target / ground-truth diagnostic with it.
+                p = pose_msg.pose.position
+                if not all(np.isfinite([p.x, p.y, p.z])):
+                    self.get_logger().warn(
+                        f"Rejected detection: non-finite position after transform "
+                        f"({p.x}, {p.y}, {p.z}) -- likely a transient degenerate TF, "
+                        "not a real detection."
+                    )
+                    pose_msg = None
+                else:
+                    pose_msg.header = rgb_msg.header
+                    pose_msg.header.frame_id = 'world'
             except Exception as e:
                 self.get_logger().warn(
                     f"Could not transform detection from {self.camera_optical_frame} "
