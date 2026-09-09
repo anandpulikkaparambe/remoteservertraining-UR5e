@@ -977,9 +977,38 @@ class UR3eEnv(gym.Env):
         # (~2*pi) to get there -- swinging wrist_1_link through the table on literally
         # the very first reset, before any training had even started. See
         # [[project-phase2-rl-status]].
-        self.home_action = np.array(
-            [-0.4513, 4.7557, -0.2256, -1.2844, -0.1041, 1.4753], dtype=np.float32
-        )
+        # Pure-RL home pose (2026-09-09, Vast.ai wrist-camera experimental track): the
+        # retract pose above is verified-safe but was never meant to give the wrist camera
+        # a view of anything -- it's a fold-up-and-away pose, and confirmed live that RL
+        # starting there gets nothing but low-confidence false-positive detections (the
+        # camera isn't pointed at the table at all), fast-failing every episode on the
+        # "Target Lost" kill-switch before a single meaningful action. When
+        # use_classical_handoff is False, start from phase1_joint_pick_and_place.py's
+        # joint_pre_pick instead -- the one pose in this codebase already documented as
+        # "Above lego_red", i.e. actually oriented toward the workspace.
+        #
+        # shoulder_lift converted to the SAME raw-unwrapped convention as the retract
+        # pose's own value above (-1.589 + 2*pi = 4.694, vs. the wrapped -1.589
+        # joint_pre_pick itself uses) -- for the identical reason documented there: this
+        # controller interpolates raw joint-space, not angle-wrapped, so commanding a
+        # wrapped value far from wherever the raw tracking actually sits risks the same
+        # near-full-revolution swing through the table already diagnosed and fixed once
+        # for this exact joint. The other 5 joints are used as-is from joint_pre_pick --
+        # only shoulder_lift was ever flagged as needing this raw/wrapped care.
+        #
+        # NOT independently re-verified against this project's current collision geometry
+        # (Robotiq-140 + wrist camera additions postdate the script this was borrowed
+        # from) -- _wait_for_safe_home()'s own collision-check-and-retry loop below is the
+        # actual safety net here, not a substitute for it. First live attempt, not a
+        # proven pose yet.
+        if self.use_classical_handoff:
+            self.home_action = np.array(
+                [-0.4513, 4.7557, -0.2256, -1.2844, -0.1041, 1.4753], dtype=np.float32
+            )
+        else:
+            self.home_action = np.array(
+                [2.040, 4.6942, 1.991, -1.973, -1.571, 0.0], dtype=np.float32
+            )
 
         # Reset Gripper to Fully Open -- BEFORE the home retreat move, not after. If a
         # prior episode ended with the gripper still closed around the block (timeout/
