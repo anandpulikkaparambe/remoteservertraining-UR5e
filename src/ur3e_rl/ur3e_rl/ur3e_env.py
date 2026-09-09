@@ -371,7 +371,16 @@ class UR3eEnv(gym.Env):
         except Exception as e:
             self.node.get_logger().warn(f'Could not fetch EE pose: {e}')
 
-    def _get_gz_object_position(self, name, timeout=1.0):
+    def _get_gz_object_position(self, name, timeout=3.0):
+        # timeout raised 1.0 -> 3.0 (2026-09-09): confirmed live that this exact `ign
+        # topic -e` query completes almost instantly run standalone, but timed out
+        # repeatedly (every call, every episode) when spawned as a subprocess from
+        # inside the already CPU-heavy train_sac process -- competing for scheduling
+        # against both the training loop and the now-uncapped (real_time_factor=0)
+        # physics engine, which by design now burns as much CPU as it can. 1.0s wasn't
+        # tight because of anything wrong with the query itself, just not enough slack
+        # under that realistic concurrent load. See pick_and_place_demo.world's
+        # real_time_factor comment for the change that raised this contention.
         """Ground-truth [x, y, z] (world frame) for a named object, queried directly from
         Gazebo via the `ign topic` CLI against /world/<world>/pose/info -- bypasses
         ros_gz_bridge, whose Pose_V -> TFMessage conversion drops the per-pose name on this
