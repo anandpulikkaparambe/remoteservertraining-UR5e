@@ -8204,3 +8204,96 @@ Logging to ./rl_logs/justrl_3
 |    n_updates       | 53010    |
 ---------------------------------
 [WARN] [1789033185.143763455] [ur3e_rl_env_node_0]: Handoff attempt 1/3 failed or unverified -- retrying.
+[INFO] [1789033211.211260692] [ur3e_rl_env_node_0]: Handoff OK -> pre-grasp [0.802, -0.260, 0.230]
+[WARN] [1789033230.106499495] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1789033375.522566764] [ur3e_rl_env_node_0]: Handoff attempt 1/3 failed or unverified -- retrying.
+[WARN] [1789033376.325436019] [ur3e_rl_env_node_0]: Handoff attempt 2/3 failed or unverified -- retrying.
+[WARN] [1789033377.028432884] [ur3e_rl_env_node_0]: Handoff attempt 3/3 failed or unverified -- retrying.
+[WARN] [1789033377.028968614] [ur3e_rl_env_node_0]: Classical handoff to pre-grasp did not verify -- starting RL episode from wherever the arm actually ended up. step()'s kill-switches will catch a genuinely unsafe state on the first step rather than this silently pretending the handoff succeeded.
+[INFO] [1789033418.882101474] [ur3e_rl_env_node_0]: Handoff OK -> pre-grasp [0.802, -0.260, 0.230]
+[WARN] [1789033435.554254814] [ur3e_rl_env_node_0]: Handoff attempt 1/3 failed or unverified -- retrying.
+[WARN] [1789033435.958605963] [ur3e_rl_env_node_0]: Handoff attempt 2/3 failed or unverified -- retrying.
+[WARN] [1789033436.563661076] [ur3e_rl_env_node_0]: Handoff attempt 3/3 failed or unverified -- retrying.
+[WARN] [1789033436.564344873] [ur3e_rl_env_node_0]: Classical handoff to pre-grasp did not verify -- starting RL episode from wherever the arm actually ended up. step()'s kill-switches will catch a genuinely unsafe state on the first step rather than this silently pretending the handoff succeeded.
+---------------------------------
+| rollout/           |          |
+|    success_rate    | 0.19     |
+| time/              |          |
+|    episodes        | 1164     |
+|    fps             | 0        |
+|    time_elapsed    | 76707    |
+|    total_timesteps | 53311    |
+| train/             |          |
+|    actor_loss      | -18.5    |
+|    critic_loss     | 0.0176   |
+|    ent_coef        | 0.00902  |
+|    ent_coef_loss   | -0.977   |
+|    learning_rate   | 0.0001   |
+|    n_updates       | 53210    |
+---------------------------------
+[INFO] [1789033490.151724303] [ur3e_rl_env_node_0]: Handoff OK -> pre-grasp [0.802, -0.260, 0.230]
+[WARN] [1789033516.371463537] [ur3e_rl_env_node_0]: Handoff attempt 1/3 failed or unverified -- retrying.
+[WARN] [1789033516.573463554] [ur3e_rl_env_node_0]: Handoff attempt 2/3 failed or unverified -- retrying.
+[WARN] [1789033518.382735270] [ur3e_rl_env_node_0]: Handoff attempt 3/3 failed or unverified -- retrying.
+[WARN] [1789033518.383288658] [ur3e_rl_env_node_0]: Classical handoff to pre-grasp did not verify -- starting RL episode from wherever the arm actually ended up. step()'s kill-switches will catch a genuinely unsafe state on the first step rather than this silently pretending the handoff succeeded.
+[WARN] [1789033544.993708154] [ur3e_rl_env_node_0]: Handoff attempt 1/3 failed or unverified -- retrying.
+[INFO] [1789033595.293417547] [ur3e_rl_env_node_0]: Handoff OK -> pre-grasp [0.802, -0.260, 0.230]
+[WARN] [1789033611.860516885] [ur3e_rl_env_node_0]: Handoff attempt 1/3 failed or unverified -- retrying.
+[WARN] [1789033622.004239035] [ur3e_rl_env_node_0]: Handoff attempt 2/3 failed or unverified -- retrying.
+[INFO] [1789033653.993593069] [ur3e_rl_env_node_0]: Handoff OK -> pre-grasp [0.802, -0.260, 0.264]
+---------------------------------
+| rollout/           |          |
+|    success_rate    | 0.19     |
+| time/              |          |
+|    episodes        | 1168     |
+|    fps             | 0        |
+|    time_elapsed    | 76924    |
+|    total_timesteps | 53511    |
+| train/             |          |
+|    actor_loss      | -18.6    |
+|    critic_loss     | 0.0134   |
+|    ent_coef        | 0.00898  |
+|    ent_coef_loss   | 2.22     |
+|    learning_rate   | 0.0001   |
+|    n_updates       | 53410    |
+---------------------------------
+[WARN] [1789033667.021782573] [ur3e_rl_env_node_0]: Handoff attempt 1/3 failed or unverified -- retrying.
+[INFO] [1789033700.791483241] [ur3e_rl_env_node_0]: Handoff OK -> pre-grasp [0.802, -0.260, 0.248]
+[WARN] [1789033714.350611427] [ur3e_rl_env_node_0]: Handoff attempt 1/3 failed or unverified -- retrying.
+[WARN] [1789033714.655797858] [ur3e_rl_env_node_0]: Handoff attempt 2/3 failed or unverified -- retrying.
+[WARN] [1789033715.058436075] [ur3e_rl_env_node_0]: Handoff attempt 3/3 failed or unverified -- retrying.
+[WARN] [1789033715.058965499] [ur3e_rl_env_node_0]: Classical handoff to pre-grasp did not verify -- starting RL episode from wherever the arm actually ended up. step()'s kill-switches will catch a genuinely unsafe state on the first step rather than this silently pretending the handoff succeeded.
+[INFO] [1789034178.095953818] [ur3e_rl_env_node_0]: Handoff OK -> pre-grasp [0.802, -0.260, 0.230]
+[WARN] [1789034194.613495343] [ur3e_rl_env_node_0]: Handoff attempt 1/3 failed or unverified -- retrying.
+[WARN] [1789034194.918769766] [ur3e_rl_env_node_0]: Handoff attempt 2/3 failed or unverified -- retrying.
+[WARN] [1789034195.522214625] [ur3e_rl_env_node_0]: Handoff attempt 3/3 failed or unverified -- retrying.
+[WARN] [1789034195.522643615] [ur3e_rl_env_node_0]: Classical handoff to pre-grasp did not verify -- starting RL episode from wherever the arm actually ended up. step()'s kill-switches will catch a genuinely unsafe state on the first step rather than this silently pretending the handoff succeeded.
+---------------------------------
+| rollout/           |          |
+|    success_rate    | 0.21     |
+| time/              |          |
+|    episodes        | 1172     |
+|    fps             | 0        |
+|    time_elapsed    | 77466    |
+|    total_timesteps | 53615    |
+| train/             |          |
+|    actor_loss      | -18.8    |
+|    critic_loss     | 0.0164   |
+|    ent_coef        | 0.00895  |
+|    ent_coef_loss   | -2.25    |
+|    learning_rate   | 0.0001   |
+|    n_updates       | 53514    |
+---------------------------------
+[WARN] [1789034212.414926868] [ur3e_rl_env_node_0]: Handoff attempt 1/3 failed or unverified -- retrying.
+[WARN] [1789034222.575605348] [ur3e_rl_env_node_0]: Handoff attempt 2/3 failed or unverified -- retrying.
+[INFO] [1789034259.965918439] [ur3e_rl_env_node_0]: Handoff OK -> pre-grasp [0.802, -0.260, 0.230]
+[WARN] [1789034263.034592904] [ur3e_rl_env_node_0]: Handoff attempt 1/3 failed or unverified -- retrying.
+[WARN] [1789034273.358033088] [ur3e_rl_env_node_0]: Handoff attempt 2/3 failed or unverified -- retrying.
+[INFO] [1789034320.079243573] [ur3e_rl_env_node_0]: Handoff OK -> pre-grasp [0.802, -0.260, 0.247]
+[WARN] [1789034326.085365987] [ur3e_rl_env_node_0]: _get_gz_object_position('lego_red'): `ign topic -e` timed out after 3.0s -- no message received on /world/lego_sorting/pose/info (check GZ_PARTITION matches the Gazebo instance this env is meant to talk to).
+[WARN] [1789034341.415484656] [ur3e_rl_env_node_0]: Handoff attempt 1/3 failed or unverified -- retrying.
+[WARN] [1789034343.219638539] [ur3e_rl_env_node_0]: Handoff attempt 2/3 failed or unverified -- retrying.
+[WARN] [1789034343.522377948] [ur3e_rl_env_node_0]: Handoff attempt 3/3 failed or unverified -- retrying.
+[WARN] [1789034343.522847047] [ur3e_rl_env_node_0]: Classical handoff to pre-grasp did not verify -- starting RL episode from wherever the arm actually ended up. step()'s kill-switches will catch a genuinely unsafe state on the first step rather than this silently pretending the handoff succeeded.
+[WARN] [1789034369.384689406] [ur3e_rl_env_node_0]: Handoff attempt 1/3 failed or unverified -- retrying.
+[WARN] [1789034370.491445520] [ur3e_rl_env_node_0]: Handoff attempt 2/3 failed or unverified -- retrying.
