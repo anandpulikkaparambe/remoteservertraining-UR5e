@@ -1,13 +1,8 @@
 FROM osrf/ros:humble-desktop-full
 
 # Install system dependencies, pip, and clean up apt cache
-# xvfb: `ign gazebo -s` (server-only/headless) still initializes OGRE for the robot's
-# wrist camera sensor and crashes without a real X display on a truly headless host
-# (confirmed live on a Vast.ai instance: Ogre::RenderingAPIException, SIGABRT) --
-# vastai_train_entrypoint.sh wraps each Gazebo launch in `xvfb-run` to give it one.
 RUN apt-get update && apt-get install -y \
     python3-pip \
-    xvfb \
     ros-humble-moveit \
     ros-humble-gazebo-ros-pkgs \
     ros-humble-gazebo-ros2-control \
@@ -21,15 +16,6 @@ RUN pip3 install --no-cache-dir -U packaging
 # Install CPU-only torch first so ultralytics/stable_baselines3 don't pull in
 # the full CUDA toolkit (several GB of wheels) as a transitive dependency.
 RUN pip3 install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
-
-# torchvision from the SAME CPU wheel index as torch, and BEFORE the ultralytics install
-# below -- confirmed live (2026-09-09) that omitting this lets pip resolve torchvision
-# from the default PyPI index as an ultralytics transitive dependency instead, pulling an
-# ABI-mismatched build (torch 2.14.0+cpu paired with a torchvision built against a
-# different torch version): "RuntimeError: operator torchvision::nms does not exist",
-# raised the first time YOLO actually runs inference (model.warmup()'s torchvision
-# import), not at install time -- silent until RUN_YOLO=true is actually exercised.
-RUN pip3 install --no-cache-dir torchvision --index-url https://download.pytorch.org/whl/cpu
 
 # Install Python dependencies for YOLOv8 and the RL training stack.
 # numpy pinned <1.24 -- ROS2 Humble's apt-installed transforms3d (pulled in by

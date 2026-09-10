@@ -8,46 +8,6 @@ trained YOLO detector instead of Gazebo ground truth.
 **Read this whole file before trusting a training run from this fork** -- several pieces
 here are new and have not been live-validated end-to-end (marked below).
 
-## Current experimental run -- live status (2026-09-09)
-
-A second architecture variant was added and is actively training on the Vast.ai
-instance (contract 50312511): **no classical MoveIt handoff** (`UR3E_USE_CLASSICAL_HANDOFF=false`)
--- RL controls the arm from the home pose all the way to grasp (`max_episode_steps=500`,
-not the hybrid path's 50), instead of MoveIt/OMPL driving it to a pre-grasp standoff
-first. Data/checkpoints from this run: `rl_logs/purerl_yolo/` (checkpoint weights,
-`purerl_yolo_*_steps.zip`), `rl_logs/train_sac_club.log` (full rollout/success-rate
-history), `rl_logs/hardware_log_env0_20260909_065955.csv` (per-step telemetry).
-Replay-buffer files (~22MB each, one per checkpoint) and the raw Gazebo debug log
-(~37MB, mostly repeated non-fatal warnings) were deliberately **not** committed --
-reproducible on demand from the running instance, not meaningful to keep in git history.
-
-**As of the last check**: 20 episodes, 10,000/100,000 timesteps, ~3,064s elapsed
-(~7,300 steps/hr and declining -- started around ~19,800 steps/hr; throughput trend
-still being watched, not yet root-caused). `success_rate: 0`, zero `Full Task Success`,
-and -- notably -- **zero kill-switch terminations at all** (no collisions, no lost
-target): every episode has ended by running out the full 500-step budget, not by doing
-anything unsafe. Too early to call this converged or stalled; the hybrid architecture's
-own SAC campaign took 1.43M steps over 22.8 days without full convergence either (see
-the main repo's `THESIS_RESULTS_REPORT.md`), and this is a strictly harder task (full
-reach, not just final approach).
-
-**Bugs found and fixed getting here** (all in git history, see commit messages for
-full detail): a `namespace:=""` malformed launch arg crashing instance 0 entirely; `ign
-gazebo -s` crashing outright on a truly headless host (no X display) because the wrist
-camera sensor still needs OGRE even server-only, fixed via `xvfb-run`; `real_time_factor`
-hardcoded to 1 throttling training to wall-clock pace despite idle CPU; a torch/torchvision
-ABI mismatch killing YOLO the moment it ran real inference; a `_get_gz_object_position`
-timeout (1.0s) too tight once `real_time_factor` was uncapped, freezing `target_pose`
-near zero for an entire run without ever tripping a kill-switch. **Separately**: the
-wrist-camera perception path (`UR3E_TARGET_SOURCE=perception`) was live-tested and its
-camera-to-world coordinate transform was verified correct by hand, but the YOLO model
-(`lego_color_20ep`) doesn't generalize to the wrist camera's close-up imagery -- trained
-on overhead-camera imagery, it produces low-confidence, wrongly-classified/oversized
-detections at this camera's scale. That's a model domain-shift problem, not a code bug --
-out of scope for a quick fix. The current run above uses `UR3E_TARGET_SOURCE=ground_truth`
-specifically to isolate "does no-handoff full-RL-reach work at all" from that separate,
-harder perception problem.
-
 ## What's different from the main repo
 
 - `.gitignore` added -- the main repo has `build/`/`install/`/`log/` committed to git
@@ -195,18 +155,6 @@ straight inside it. Steps below, worked out and verified against the live consol
     first run on a fresh instance -- the whole multi-instance path is unvalidated (see
     "Known, unresolved blockers" above), and a smaller club is cheaper to debug if the
     fixed-sleep readiness wait in `vastai_train_entrypoint.sh` turns out too short.
-    **Live-validated 2026-09-08 on a 16-core / 31GB instance: `NUM_ENVS=2` ran cleanly
-    end-to-end (SAC training loop started, both instances' controllers activated).
-    `NUM_ENVS=4` on the same box did not** -- the simultaneous-boot CPU spike (4
-    Gazebo servers + MoveIt + controller spawners all starting within the same ~60s
-    window) pushed load average to 22 on 16 cores, and `ros2_control`'s spawner
-    processes don't retry indefinitely -- 2 of the 4 instances had their controller
-    spawners die outright (`process has died [exit code 1]`), permanently breaking
-    those environments for that run. This project's own ~3-cores/instance estimate
-    (see "Sizing" below) holds at *steady state* but undercounts the simultaneous-boot
-    spike -- size `NUM_ENVS` for the boot spike, not steady-state usage, or stagger the
-    launch further apart (`vastai_train_entrypoint.sh`'s 15s-per-instance gap wasn't
-    enough at 4 instances on 16 cores).
 12. **Watch progress**: `tail -f rl_logs/train_sac_club.log` and
     `rl_logs/gazebo_instance*.log`.
 13. **Pull checkpoints back periodically** (from your local machine, `pip install

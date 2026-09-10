@@ -272,6 +272,22 @@ class UR3eEnv(gym.Env):
         self._spin_thread = threading.Thread(target=rclpy.spin, args=(self.node,), daemon=True)
         self._spin_thread.start()
 
+        # Persistent background Gazebo pose subscriber (2026-09-09 fix -- see
+        # _get_gz_object_position). Spawns ONE long-lived `ign topic -e` process that
+        # streams every pose update, parsed continuously into self._gz_pose_cache.
+        # Callers then do an in-memory dict lookup instead of paying a fresh subprocess
+        # spawn + topic discovery/subscribe round-trip on every single call, which is
+        # what was timing out ~54% of the time (334/615 warn lines over one 5hr run)
+        # once train_sac's own CPU load and real_time_factor=0's uncapped physics were
+        # both competing for the same cores. See [[project-phase2-rl-status]].
+        self._gz_pose_cache = {}
+        self._gz_pose_cache_lock = threading.Lock()
+        self._gz_pose_cache_time = 0.0
+        self._gz_pose_proc = None
+        self._gz_pose_thread_stop = threading.Event()
+        self._gz_pose_thread = threading.Thread(target=self._gz_pose_subscriber_loop, daemon=True)
+        self._gz_pose_thread.start()
+
         # --- Custom Hardware Logger ---
         os.makedirs("./rl_logs", exist_ok=True)
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -371,67 +387,96 @@ class UR3eEnv(gym.Env):
         except Exception as e:
             self.node.get_logger().warn(f'Could not fetch EE pose: {e}')
 
-    def _get_gz_object_position(self, name, timeout=3.0):
-        # timeout raised 1.0 -> 3.0 (2026-09-09): confirmed live that this exact `ign
-        # topic -e` query completes almost instantly run standalone, but timed out
-        # repeatedly (every call, every episode) when spawned as a subprocess from
-        # inside the already CPU-heavy train_sac process -- competing for scheduling
-        # against both the training loop and the now-uncapped (real_time_factor=0)
-        # physics engine, which by design now burns as much CPU as it can. 1.0s wasn't
-        # tight because of anything wrong with the query itself, just not enough slack
-        # under that realistic concurrent load. See pick_and_place_demo.world's
-        # real_time_factor comment for the change that raised this contention.
-        """Ground-truth [x, y, z] (world frame) for a named object, queried directly from
-        Gazebo via the `ign topic` CLI against /world/<world>/pose/info -- bypasses
-        ros_gz_bridge, whose Pose_V -> TFMessage conversion drops the per-pose name on this
-        bridge version (identical problem/fix as _get_gz_object_position in
-        phase1_tf_pick_and_place.py). Returns None on timeout/parse failure/missing name.
-        Uses `ign`, not `gz`: confirmed live that this stack's `gz` CLI can't discover the
-        running `ign gazebo` (Fortress) server at all, even though the sim is genuinely up
-        -- `ign topic` is the one that actually talks to it."""
-        # Bare "except: return None" here previously masked the exact bug that froze
-        # target_pose at [0,0,0] for months (see [[project-phase2-rl-status]]) -- logging
-        # *why* this failed (once per episode, matching this method's own once-per-episode
-        # call cadence via _target_pose_valid, not once per step) is what would have
-        # surfaced that instantly instead of requiring after-the-fact CSV forensics.
-        try:
-            proc = subprocess.run(
-                ['ign', 'topic', '-e', '-t', f'/world/{self.gz_world_name}/pose/info',
-                 '-n', '1', '--json-output'],
-                capture_output=True, text=True, timeout=timeout
-            )
-            if proc.returncode != 0:
-                self.node.get_logger().warn(
-                    f"_get_gz_object_position('{name}'): `ign topic -e` exited "
-                    f"{proc.returncode}: {proc.stderr.strip()[:300]}"
+    def _gz_pose_subscriber_loop(self):
+        """Background thread body (2026-09-09): keeps ONE `ign topic -e` process alive,
+        continuously streaming /world/<world>/pose/info into self._gz_pose_cache instead
+        of spawning a new `ign topic -e` subprocess (with its own discovery/subscribe
+        handshake) on every single _get_gz_object_position() call -- that per-call design
+        was what actually timed out under CPU contention, not the query itself (confirmed
+        live: identical query completes in ~0.25s run standalone). Restarts the process
+        with a short backoff if it ever exits (Gazebo restart, transport hiccup, etc)."""
+        topic = f'/world/{self.gz_world_name}/pose/info'
+        while not self._gz_pose_thread_stop.is_set():
+            try:
+                self._gz_pose_proc = subprocess.Popen(
+                    ['ign', 'topic', '-e', '-t', topic, '--json-output'],
+                    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1
                 )
-                return None
-            # `-n 1` occasionally still writes two concatenated JSON messages to stdout
-            # (confirmed live 2026-09-03) -- a bare json.loads() on the full stdout then
-            # raises "Extra data: line 2 column 1" on the second message's leftover bytes.
-            # raw_decode() parses only the first complete JSON value and reports where it
-            # stopped, so trailing data (a second message, or just whitespace) no longer
-            # breaks a query that otherwise succeeded. See implementation spec section 6.
-            data = json.JSONDecoder().raw_decode(proc.stdout.strip())[0]
-        except subprocess.TimeoutExpired:
+            except Exception as e:
+                self.node.get_logger().warn(f'_gz_pose_subscriber_loop: failed to start `ign topic -e`: {e}')
+                time.sleep(2.0)
+                continue
+
+            buf = ''
+            for chunk in iter(lambda: self._gz_pose_proc.stdout.read(4096), ''):
+                if self._gz_pose_thread_stop.is_set():
+                    break
+                buf += chunk
+                # Messages aren't reliably newline-delimited (same quirk the old per-call
+                # `-n 1` path hit with concatenated JSON, confirmed live 2026-09-03) --
+                # repeatedly raw_decode the first complete JSON value off the front of buf
+                # and drop it, same technique as before, just looped over a live stream.
+                while True:
+                    stripped = buf.lstrip()
+                    if not stripped:
+                        buf = ''
+                        break
+                    try:
+                        data, idx = json.JSONDecoder().raw_decode(stripped)
+                    except json.JSONDecodeError:
+                        break  # incomplete message -- wait for more data
+                    buf = stripped[idx:]
+                    poses = {
+                        p.get('name'): [p.get('position', {}).get('x', 0.0),
+                                        p.get('position', {}).get('y', 0.0),
+                                        p.get('position', {}).get('z', 0.0)]
+                        for p in data.get('pose', []) if p.get('name')
+                    }
+                    with self._gz_pose_cache_lock:
+                        self._gz_pose_cache = poses
+                        self._gz_pose_cache_time = time.time()
+
+            if self._gz_pose_thread_stop.is_set():
+                break
             self.node.get_logger().warn(
-                f"_get_gz_object_position('{name}'): `ign topic -e` timed out after "
-                f"{timeout}s -- no message received on /world/{self.gz_world_name}/pose/info "
-                "(check GZ_PARTITION matches the Gazebo instance this env is meant to talk to)."
+                f'_gz_pose_subscriber_loop: `ign topic -e` on {topic} exited unexpectedly, restarting in 2s'
+            )
+            time.sleep(2.0)
+
+    def _stop_gz_pose_subscriber(self):
+        self._gz_pose_thread_stop.set()
+        if self._gz_pose_proc is not None:
+            self._gz_pose_proc.terminate()
+        self._gz_pose_thread.join(timeout=2.0)
+
+    def _get_gz_object_position(self, name, timeout=3.0):
+        """Ground-truth [x, y, z] (world frame) for a named object, read from
+        self._gz_pose_cache -- kept fresh by the persistent background subscriber
+        started in __init__ (_gz_pose_subscriber_loop) instead of querying Gazebo
+        per-call. `timeout` is now the cache-staleness threshold, not a subprocess
+        timeout: the old per-call `ign topic -e` subprocess design paid a fresh topic
+        discovery/subscribe round-trip on every single call, which timed out ~54% of
+        calls (334/615 warn lines) over one 5hr run once train_sac's own CPU load and
+        real_time_factor=0's uncapped physics were both competing for the same cores --
+        see [[project-phase2-rl-status]]. Returns None if the cache is stale/empty or
+        the name isn't in the latest snapshot."""
+        with self._gz_pose_cache_lock:
+            cache = self._gz_pose_cache
+            cache_time = self._gz_pose_cache_time
+        age = time.time() - cache_time
+        if cache_time == 0.0 or age > timeout:
+            self.node.get_logger().warn(
+                f"_get_gz_object_position('{name}'): pose cache is stale ({age:.1f}s old) -- "
+                "background `ign topic -e` subscriber may be down (check GZ_PARTITION matches "
+                "the Gazebo instance this env is meant to talk to)."
             )
             return None
-        except Exception as e:
-            self.node.get_logger().warn(f"_get_gz_object_position('{name}'): {e}")
-            return None
-        names_seen = [pose.get('name') for pose in data.get('pose', [])]
-        for pose in data.get('pose', []):
-            if pose.get('name') == name:
-                pos = pose.get('position', {})
-                return [pos.get('x', 0.0), pos.get('y', 0.0), pos.get('z', 0.0)]
-        self.node.get_logger().warn(
-            f"_get_gz_object_position('{name}'): not found in pose list, saw: {names_seen}"
-        )
-        return None
+        pos = cache.get(name)
+        if pos is None:
+            self.node.get_logger().warn(
+                f"_get_gz_object_position('{name}'): not found in pose list, saw: {list(cache.keys())}"
+            )
+        return pos
 
     def _update_target_pose(self):
         """Fetch the dynamic physical position of the red lego object, in base_link frame.
@@ -1187,6 +1232,7 @@ class UR3eEnv(gym.Env):
         pass
 
     def close(self):
+        self._stop_gz_pose_subscriber()
         self.node.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()
